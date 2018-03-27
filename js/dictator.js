@@ -72,10 +72,10 @@ if (!('webkitSpeechRecognition' in window)) {
     
     recognition.onresult = function(event) {
 
-	//console.log("Event ", event);
+	console.log("Event ", event);
 	//console.log("Timestamp ", event.timeStamp);
 	
-	var interim_transcript = '';
+
 	
 	for (var i = event.resultIndex; i < event.results.length; ++i) {
 	    if (event.results[i].isFinal) {
