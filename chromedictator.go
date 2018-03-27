@@ -22,16 +22,14 @@ func main() {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
-	//r.HandleFunc("/js/dictator.js", js)
-	// TODO Probably needs prefix, e /dict/
+	// TODO Probably needs prefix, e.g. /dict/
 	r.HandleFunc("/", index)
 
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("js/"))))
 
 	srv := &http.Server{
-		Handler: r,
-		Addr:    "127.0.0.1:" + p,
-		// Good practice: enforce timeouts for servers you create!
+		Handler:      r,
+		Addr:         "127.0.0.1:" + p,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
