@@ -35,6 +35,9 @@ if (!('webkitSpeechRecognition' in window)) {
 	
 	startButton.disabled = true;
 	stopButton.disabled = false;
+
+	// TODO Ok to nick gif from https://www.google.com/intl/en/chrome/demos/speech.html?
+	document.getElementById("micimage").src = "js/mic-animate.gif";
 	
 	document.getElementById("tempresponse").innerHTML = '';
 	document.getElementById("finalresponse").innerHTML = '';
@@ -48,6 +51,8 @@ if (!('webkitSpeechRecognition' in window)) {
 	
 	startButton.disabled = false;
 	stopButton.disabled = true;
+	// TODO Ok to nick gif from https://www.google.com/intl/en/chrome/demos/speech.html?
+	document.getElementById("micimage").src = "js/mic.gif";
 	recognition.stop();
 	
     });
