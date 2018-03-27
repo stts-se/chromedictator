@@ -43,7 +43,7 @@ if (!('webkitSpeechRecognition' in window)) {
 	document.getElementById("finalresponse").innerHTML = '';
 	
 	recognition.start();
-	
+	console.log("Started lang ", recognition.lang)
     });
 
     stopButton =  document.getElementById("stopbutton");
@@ -71,6 +71,10 @@ if (!('webkitSpeechRecognition' in window)) {
     langSelect.value = recognition.lang; 
     
     recognition.onresult = function(event) {
+
+	//console.log("Event ", event);
+	//console.log("Timestamp ", event.timeStamp);
+	
 	var interim_transcript = '';
 	
 	for (var i = event.resultIndex; i < event.results.length; ++i) {
