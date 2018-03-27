@@ -1,5 +1,7 @@
 var recognition;
 
+
+
 var stopButton, startButton;
 
 // See e.g. https://developers.google.com/web/updates/2013/01/Voice-Driven-Web-Apps-Introduction-to-the-Web-Speech-API
@@ -8,9 +10,24 @@ var stopButton, startButton;
 if (!('webkitSpeechRecognition' in window)) {
     alert("This browser does not support webkit speech recognition");
 } else {
+
+
+    
+    var langSelect = document.getElementById("lang");
+    langSelect.addEventListener("change", function(event) {
+	
+	var i  = langSelect.selectedIndex
+	var lang = langSelect.options[i].value
+	if (!startButton.disabled) {
+	    stopButton.click();
+	};
+	recognition.lang = lang;
+
+    });
+
     
 
-      
+    
     startButton = document.getElementById("startbutton");
     startButton.disabled = false;
     
@@ -18,7 +35,7 @@ if (!('webkitSpeechRecognition' in window)) {
 	
 	startButton.disabled = true;
 	stopButton.disabled = false;
-
+	
 	document.getElementById("tempresponse").innerHTML = '';
 	document.getElementById("finalresponse").innerHTML = '';
 	
@@ -45,6 +62,8 @@ if (!('webkitSpeechRecognition' in window)) {
     recognition.continuous = true;
     recognition.interimResults = true;
     //recognition.lang = 'da-DK';
+    console.log("LANG: ", recognition.lang);
+    langSelect.value = recognition.lang; 
     
     recognition.onresult = function(event) {
 	var interim_transcript = '';
