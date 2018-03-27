@@ -18,7 +18,7 @@ if (!('webkitSpeechRecognition' in window)) {
 	
 	var i  = langSelect.selectedIndex
 	var lang = langSelect.options[i].value
-	if (!startButton.disabled) {
+	if (startButton.disabled) {
 	    stopButton.click();
 	};
 	recognition.lang = lang;
@@ -88,6 +88,32 @@ if (!('webkitSpeechRecognition' in window)) {
 	    }
 	}
     };    
+
+    recognition.onerror = function(event) {
+	console.log("Error: ", event);
+	
+	if (event.error == 'no-speech') {
+	    document.getElementById("micimage").src = "js/mic.gif";
+	    // TODO msg user
+	    
+	    //ignore_onend = true;
+	}
+	if (event.error == 'audio-capture') {
+	    document.getElementById("micimage").src = "js/mic.gif";
+	    // TODO msg user
+	    
+	    //showInfo('info_no_microphone');
+	    //ignore_onend = true;
+	}
+	if (event.error == 'not-allowed') {
+	    if (event.timeStamp - start_timestamp < 100) {
+		//showInfo('info_blocked');
+	    } else {
+		//showInfo('info_denied');
+	    }
+	    //ignore_onend = true;
+	}
+    };
 }
 
 
