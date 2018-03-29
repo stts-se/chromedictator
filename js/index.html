@@ -1,39 +1,65 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <title>Chrome Dictator</title>
   </head>
   <body>
-    <h1>Chrome Dictator</h1>
-
-    <label>Language</label>
-    <select id="lang">
-      <option value="sv-SE">sv-SE</option>
-      <option value="en-UK">en-UK</option>
-      <option value="en-US">en-US</option>
-      <option value="da-DK">da-DK</option>
-      <!-- <option value="strut-Gnuut">strut-Gnuut</option> -->
+    <div class="jumbotron text-center">
+      <h1>Chrome Dictator</h1>
+      <p>Test application using Google Chrome's speech recognition API
+    </div>
+    <div class="container-fluid">
       
-    </select>
-
-    <p>
+      <div class="row">
+	<div class="col-md-2">
+	  <label>Language</label>
+	  <select  id="lang">
+	    <option value="sv-SE">sv-SE</option>
+	    <option value="en-UK">en-UK</option>
+	    <option value="en-US">en-US</option>
+	    <option value="da-DK">da-DK</option>
+	    <!-- <option value="strut-Gnuut">strut-Gnuut</option> -->   
+	  </select>
+	</div>
+	<div class="col-md-10"></div>
+      </div>
+      <div class="row">
+	<div class="col-md">
+	  <button type="button" class="btn btn-outline-primary" id="startbutton" disabled >Start</button>
+	  <button type="button" class="btn btn-outline-danger" id="stopbutton" disabled >Stop</button>
+	  <!-- TODO Ok to nick gif from https://www.google.com/intl/en/chrome/demos/speech.html? -->
+	  <image id="micimage" src="js/mic.gif"></image>
+	</div>
+      </div>
+      
+      <div class="row">
+	<div class="col-md">
+	  <div id="finalresponse"></div><em><div style="color: grey" id="tempresponse"></div></em>
+	</div>
+      </div>
+      
+      <div class="row">
+	<div class="col-md">
+	  
+	  <div style="color: red" id="msg"></div>
+	  
+	</div>
+      </div>
+      
+      
+    </div> <!--container -->
     
-    <button id="startbutton" disabled >Start</button>
-    <button id="stopbutton" disabled >Stop</button>
-    <!-- TODO Ok to nick gif from https://www.google.com/intl/en/chrome/demos/speech.html? -->
-    <image id="micimage" src="js/mic.gif"></image>
-    
-         
-    <p>
+
+      <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
       
-      <div id="finalresponse"></div><em><div style="color: grey" id="tempresponse"></div></em>
-      
-    <p>
-      
-      <div style="color: red" id="msg"></div>  
-      
+      <script src="js/dictator.js"></script>
   </body>
-  
-  <script src="js/dictator.js"></script>
+ 
   
 </html>
