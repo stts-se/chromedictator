@@ -33,7 +33,7 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	log.Println("rec server started on localhost:" + p)
+	log.Println("chromedictator server started on localhost:" + p)
 	log.Fatal(srv.ListenAndServe())
 	fmt.Println("No fun")
 }
