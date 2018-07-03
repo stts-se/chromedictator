@@ -9,6 +9,7 @@
 
  cd chromedictator
 
+
  go run chromedictator.go
 
 
