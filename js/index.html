@@ -22,42 +22,36 @@
     </div>
     <div class="container">
       
-      <div class="row">
+      <div class="row mb-3">
 	
-	<div class="col-md-2">
+	<div>
+	  
 	  <label>Language</label>
-	  <select  id="lang">
-	    <option value="sv-SE">sv-SE</option>
+	  <select id="lang" class="mr-3">
+	    <option selected value="sv-SE">sv-SE</option>
 	    <option value="en-UK">en-UK</option>
 	    <option value="en-US">en-US</option>
 	    <option value="da-DK">da-DK</option>
 	  </select>
-	</div>
-	
-	<div class="col-md-1">
-	  <button type="button" class="btn btn-outline-primary" id="startbutton" disabled >Start</button>
-	</div>
-	
-	<div class="col-md-1">
-	  <button type="button" class="btn btn-outline-danger" id="stopbutton" disabled >Stop</button>
+	  
+	  <button type="button" class="btn btn-outline-primary mr-3" id="startbutton" disabled >Start</button>
+
+	  <button type="button" class="btn btn-outline-danger mr-1" id="stopbutton" disabled >Stop</button>
 	  <!-- TODO Ok to nick gif from https://www.google.com/intl/en/chrome/demos/speech.html? -->
+	  
+	  <image type="button" id="micimage" src="js/mic.gif"></image>
+	  
+	  <span style="color: red" id="msg"></span>
+	  
 	</div>
-	
-	<div class="col-md-1">
-	  <image id="micimage" src="js/mic.gif"></image>
-	</div>
-	
-	<div class="col-md-3">
-	  <div style="color: red" id="msg"></div>
-	</div>
-	
-	<div class="col-md-4"></div>
 	
       </div>
       
       <div class="row">
 	<div class="col-md-12" style="border:1px solid #cecece; width: 100vw; height: 50vh;">
-	  <div  id="finalresponse"></div><em><div style="color: grey" id="tempresponse"></div></em>
+	  <!-- <div style="width: 100%; border: none" id="finalresponse"></div> -->
+	  <textarea style="height: 0; width: 100%; border: none" id="finalresponse"></textarea>
+	  <em><div style="color: grey" id="tempresponse"></div></em>
 	</div>
       </div>
       
