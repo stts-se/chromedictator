@@ -13,7 +13,7 @@ var start_timestamp;
 
 
 
-// TODO Slit init into sub functions
+// TODO Split init into sub functions
 // TODO refactor multiple calls to document.getElementById for the same element
 var init = function () {
 
