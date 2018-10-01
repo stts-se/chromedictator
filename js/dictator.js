@@ -1,3 +1,5 @@
+"use strict";
+
 var recognition;
 
 
@@ -11,6 +13,31 @@ var start_timestamp;
 // Cf https://webcaptioner.com/
 
 
+// TODO Put this somewhere it belongs
+// This is going to be code for automatically expanding abbreviations as you type.
+// The user specifies a list of abbreviations and their expansions.
+var leftWordRE = /(?:^| )([^ ]+)$/;
+function checkForAbbrev(evt) {
+    if ( evt.key === " ") {
+	//console.log("EVT", evt);
+
+	// Ugh... going in circles...
+	let ta = document.getElementById("finalresponse");
+	var startPos = ta.selectionStart;
+        //var endPos = ta.selectionEnd;
+        //alert(startPos + ", " + endPos);
+	
+	let text = ta.value;
+	// -1 is to remove the trailing space
+	let stringUp2Curson = text.substring(0,startPos-1);
+	let wordBeforeSpace = leftWordRE.exec(stringUp2Curson)[0];
+	//console.log("wbs", wordBeforeSpace);
+
+	// TODO Take wordBeforeSpace and look up in abbrev dictionary.
+	// If abbrev found, expand abbrev in place into target word
+	
+    }
+}
 
 
 // TODO Split init into sub functions
@@ -77,6 +104,7 @@ var init = function () {
 	var finalResponse = document.getElementById("finalresponse");
 
 	finalResponse.addEventListener('keyup', keyupAutosize);
+	finalResponse.addEventListener('keyup', checkForAbbrev);
 
 	function keyupAutosize(){
 	    console.log("keyup event called");
