@@ -26,29 +26,26 @@ var leftWordRE = /(?:^| )([^ ]+)$/; // TODO Really no need for regexp,
 
 function checkForAbbrev(evt) {
     if ( evt.key === " ") {
-	console.log("EVT", evt);
-	
 	// Ugh... going in circles...
 	let ta = document.getElementById("finalresponse");
 	var startPos = ta.selectionStart;
-        //var endPos = ta.selectionEnd;
-        //alert(startPos + ", " + endPos);
 	
 	let text = ta.value;
 	// -1 is to remove the trailing space
 	let stringUp2Cursor = text.substring(0,startPos-1);
+
+	// wordBeforeSpace will have a trailing space
 	let wordBeforeSpace = leftWordRE.exec(stringUp2Cursor)[0];
-	console.log("WORD BEFORE SPACE", wordBeforeSpace);
 	
 	if (abbrevMap.hasOwnProperty(wordBeforeSpace.trim())) {
 	    console.log(wordBeforeSpace, abbrevMap[wordBeforeSpace]);
 	    // Match found. Replace abbreviation with its expansion
 	    let textBefore = text.substring(0,startPos - wordBeforeSpace.length);
-	    console.log("TEXT BEFORE", textBefore);
 	    let textAfter = text.substring(startPos);
-	    console.log("TEXT AFTER", textAfter);
+	    let expansion = abbrevMap[wordBeforeSpace.trim()];
+	    
 	    // TODO Move cursor to directly after expanded word
-	    ta.value = textBefore.trim() + " " + abbrevMap[wordBeforeSpace.trim()] + " " + textAfter.trim();
+	    ta.value = textBefore.trim() + " " + expansion + " " + textAfter.trim();
 	    
 	};
 	
