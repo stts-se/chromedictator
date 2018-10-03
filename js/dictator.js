@@ -16,11 +16,18 @@ var start_timestamp;
 // TODO Put this somewhere it belongs
 // This is going to be code for automatically expanding abbreviations as you type.
 // The user specifies a list of abbreviations and their expansions.
-var leftWordRE = /(?:^| )([^ ]+)$/;
+
+
+var abbrevMap = {"tstg": "testing", "tst":"test"};
+
+var leftWordRE = /(?:^| )([^ ]+)$/; // TODO Really no need for regexp,
+				    // just pick off characters until
+				    // space, etc, or end of string?
+
 function checkForAbbrev(evt) {
     if ( evt.key === " ") {
-	//console.log("EVT", evt);
-
+	console.log("EVT", evt);
+	
 	// Ugh... going in circles...
 	let ta = document.getElementById("finalresponse");
 	var startPos = ta.selectionStart;
@@ -29,9 +36,22 @@ function checkForAbbrev(evt) {
 	
 	let text = ta.value;
 	// -1 is to remove the trailing space
-	let stringUp2Curson = text.substring(0,startPos-1);
-	let wordBeforeSpace = leftWordRE.exec(stringUp2Curson)[0];
-	//console.log("wbs", wordBeforeSpace);
+	let stringUp2Cursor = text.substring(0,startPos-1);
+	let wordBeforeSpace = leftWordRE.exec(stringUp2Cursor)[0];
+	console.log("WORD BEFORE SPACE", wordBeforeSpace);
+	
+	if (abbrevMap.hasOwnProperty(wordBeforeSpace.trim())) {
+	    console.log(wordBeforeSpace, abbrevMap[wordBeforeSpace]);
+	    // Match found. Replace abbreviation with its expansion
+	    let textBefore = text.substring(0,startPos - wordBeforeSpace.length);
+	    console.log("TEXT BEFORE", textBefore);
+	    let textAfter = text.substring(startPos);
+	    console.log("TEXT AFTER", textAfter);
+	    // TODO Move cursor to directly after expanded word
+	    ta.value = textBefore.trim() + " " + abbrevMap[wordBeforeSpace.trim()] + " " + textAfter.trim();
+	    
+	};
+	
 
 	// TODO Take wordBeforeSpace and look up in abbrev dictionary.
 	// If abbrev found, expand abbrev in place into target word
