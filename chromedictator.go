@@ -123,7 +123,30 @@ func addAbbrev(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "saved abbbreviation %s %s\n", abbrev, expansion)
+	fmt.Fprintf(w, "saved abbbreviation '%s' '%s'\n", abbrev, expansion)
+}
+
+func deleteAbbrev(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	abbrev := params["abbrev"]
+	//expansion := params["expansion"]
+
+	// TODO Error check that abbrev doesn't already exist in map
+	mutex.Lock()
+	delete(abbrevs, abbrev)
+	mutex.Unlock() // Can't use defer here, since call below uses
+	// locking
+
+	// This could be done consurrently, but easier to catch errors this way
+	err := persistAbbrevs()
+	if err != nil {
+		msg := fmt.Sprintf("deleteAbbrev: failed to save abbrev map to gob file : %v", err)
+		log.Println(msg)
+		http.Error(w, "failed to save abbreviation(s)", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "deleted abbbreviation '%s'\n", abbrev)
 }
 
 func main() {
@@ -158,8 +181,7 @@ func main() {
 	r.HandleFunc("/", index)
 	r.HandleFunc("/list_abbrevs", listAbbrevs)
 	r.HandleFunc("/add_abbrev/{abbrev}/{expansion}", addAbbrev)
-	// TODO delete function
-	//r.HandleFunc("/delete_abbrev/{abbrev}", deleteAbbrev)
+	r.HandleFunc("/delete_abbrev/{abbrev}", deleteAbbrev)
 
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("js/"))))
 
