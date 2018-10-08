@@ -1,6 +1,9 @@
 "use strict";
 
+var baseURL = window.location;
 var recognition;
+
+console.log("baseURL", baseURL);
 
 
 var stopButton, startButton;
@@ -33,7 +36,7 @@ function checkForAbbrev(evt) {
 	let text = ta.value;
 	// -1 is to remove the trailing space
 	let stringUp2Cursor = text.substring(0,startPos-1);
-
+	
 	// wordBeforeSpace will have a trailing space
 	let wordBeforeSpace = leftWordRE.exec(stringUp2Cursor)[0];
 	
@@ -49,7 +52,7 @@ function checkForAbbrev(evt) {
 	    
 	};
 	
-
+	
 	// TODO Take wordBeforeSpace and look up in abbrev dictionary.
 	// If abbrev found, expand abbrev in place into target word
 	
@@ -78,11 +81,11 @@ var init = function () {
 		stopButton.click();
 	    };
 	    recognition.lang = lang;
-
+	    
 	});
-
 	
-
+	
+	
 	
 	startButton = document.getElementById("startbutton");
 	startButton.disabled = false;
@@ -173,12 +176,12 @@ var init = function () {
 		// TODO msg user
 		document.getElementById("msg").innerHTML = 'No speech<br>';
 		
-	    }
+	    };
 	    if (event.error == 'audio-capture') {
 		document.getElementById("micimage").src = "js/mic.gif";
 		document.getElementById("msg").innerHTML = 'No microphone<br>';
-
-	    }
+		
+	    };
 	    if (event.error == 'not-allowed') {
 		if (event.timeStamp - start_timestamp < 100) {
 		    document.getElementById("msg").innerHTML = 'Blocked<br>';
@@ -186,13 +189,68 @@ var init = function () {
 		    document.getElementById("msg").innerHTML = 'Denied<br>';
 		}
 		
-	    }
+	    };
 	    if (event.error == 'network') {
 		document.getElementById("msg").innerHTML = 'Network error<br>';
 	    }
 	};
-    }
+    };
 
+    
+    // Init abbrev hash table from server
+    initAbbrevTable();
+    
+    
+    // Bootstrap already has JQuery as a dependancy
+
+    
+    $("#abbrev_table").on('click', 'tr', function(evt) {
+	let row = $(this);
+	//let row = row0[0];
+	let dts = row.children('td');
+	console.log("KLIKKETIKLIKK ++", dts);
+	console.log("KLIKKETIKLIKK --", dts[0]);
+	console.log("KLIKKETIKLIKK --", dts[1]);
+	console.log("---------------------");
+    } );
+    
+    
+    $("#add_abbrev_button").on('click', function(evt) {
+	let abbrev = document.getElementById("input_abbrev").value.trim();
+	let expansion = document.getElementById("input_expansion").value.trim();
+	
+	// TODO add button should be disablem without text in both input fields, etc
+	// TODO proper validation
+	if (abbrev === "") {
+	    document.getElementById("msg").innerText = "Cannot add empty abbreviation";
+	    return;
+	};
+	if (abbrev === "") {
+	    document.getElementById("msg").innerText = "Cannot add empty expansion";
+	    return;
+	};
+	
+	abbrevMap[abbrev] = expansion;
+	// TODO Send to server to persist
+	
+	
+	//console.log("abbrev", abbrev);
+	//console.log("expansion", expansion);
+    });
+    
+};
+
+
+// Asks sever for list of persited abbrevisations, and fills in the
+// clients hashmap
+function initAbbrevTable() {
+    let xhr = new XMLHttpRequest();
+    xhr.open("GET", baseURL+ "list_abbrevs" , true)
+};
+
+function addAbbrev(abbrev, expansion) {
+    let xhr = new XMLHttpRequest();
+    xhr.open("GET", baseURL+ "/add_abbrev/"+ abbrev + "/"+ expansion , true)
 };
 
 

@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"sync"
 	"time"
 )
@@ -15,8 +17,13 @@ import (
 //	http.ServeFile(w, r, "./js/dictator.js")
 //}
 
+var abbrevFilePath = "abbrevs.gob"
 var abbrevs = make(map[string]string)
 var mutex = &sync.RWMutex{}
+
+func persistAbbrevs() error {
+	return map2GobFile(abbrevs, abbrevFilePath)
+}
 
 func map2GobFile(m map[string]string, fName string) error {
 
@@ -66,23 +73,81 @@ func index(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./js/index.html")
 }
 
+type Abbrev struct {
+	Abbrev    string `json:"abbrev"`
+	Expansion string `json:"expansion"`
+}
+
+func listAbbrevs(w http.ResponseWriter, r *http.Request) {
+	res := []Abbrev{}
+
+	mutex.RLock()
+	defer mutex.RUnlock()
+
+	for k, v := range abbrevs {
+		res = append(res, Abbrev{Abbrev: k, Expansion: v})
+	}
+
+	sort.Slice(res, func(i, j int) bool { return res[i].Abbrev < res[j].Abbrev })
+
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		msg := fmt.Sprintf("listAbbrevs: failed to marshal map of abbreviations : %v", err)
+		log.Println(msg)
+		http.Error(w, "failed to return list of abbreviations", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, string(resJSON))
+
+}
+
+func addAbbrev(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	abbrev := params["abbrev"]
+	expansion := params["expansion"]
+
+	// TODO Error check that abbrev doesn't already exist in map
+	mutex.Lock()
+	abbrevs[abbrev] = expansion
+	mutex.Unlock() // Can't use defer here, since call below uses
+	// locking
+
+	// This could be done consurrently, but easier to catch errors this way
+	err := persistAbbrevs()
+	if err != nil {
+		msg := fmt.Sprintf("addAbbrev: failed to save abbrev map to gob file : %v", err)
+		log.Println(msg)
+		http.Error(w, "failed to save abbreviation(s)", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "saved abbbreviation %s %s\n", abbrev, expansion)
+}
+
 func main() {
 
-	fn := "testfile.gob"
-	m := map[string]string{"a": "apa", "b": "bepa", "c": "cepa", "d": "depa"}
-	err := map2GobFile(m, fn)
-	if err != nil {
-		fmt.Printf("Major disaster: %v\n", err)
-		return
+	//fn := "abbrevs_map.gob"
+	//m := map[string]string{"a": "apa", "b": "bepa", "c": "cepa", "d": "depa"}
+	//err := map2GobFile(m, fn)
+	//if err != nil {
+	//	fmt.Printf("Major disaster: %v\n", err)
+	//	return
+	//}
+
+	// Load persisted abbrev map if it exists
+	if _, err := os.Stat(abbrevFilePath); !os.IsNotExist(err) {
+
+		m, err := gobFile2Map(abbrevFilePath)
+		if err != nil {
+			fmt.Printf("Major disaster: %v\n", err)
+			return
+		}
+
+		abbrevs = m
 	}
 
-	m2, err := gobFile2Map(fn)
-	if err != nil {
-		fmt.Printf("Major disaster: %v\n", err)
-		return
-	}
-
-	fmt.Printf("%#v\n", m2)
+	//fmt.Printf("%#v\n", m2)
 
 	p := "7654"
 	r := mux.NewRouter()
@@ -90,6 +155,10 @@ func main() {
 
 	// TODO Probably needs prefix, e.g. /dict/
 	r.HandleFunc("/", index)
+	r.HandleFunc("/list_abbrevs", listAbbrevs)
+	r.HandleFunc("/add_abbrev/{abbrev}/{expansion}", addAbbrev)
+	// TODO delete function
+	//r.HandleFunc("/delete_abbrev/{abbrev}", deleteAbbrev)
 
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("js/"))))
 
