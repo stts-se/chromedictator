@@ -3,7 +3,7 @@
 var baseURL = window.location;
 var recognition;
 
-console.log("baseURL", baseURL);
+//console.log("baseURL", baseURL);
 
 
 var stopButton, startButton;
@@ -41,7 +41,7 @@ function checkForAbbrev(evt) {
 	let wordBeforeSpace = leftWordRE.exec(stringUp2Cursor)[0];
 	
 	if (abbrevMap.hasOwnProperty(wordBeforeSpace.trim())) {
-	    console.log(wordBeforeSpace, abbrevMap[wordBeforeSpace]);
+	    //console.log(wordBeforeSpace, abbrevMap[wordBeforeSpace]);
 	    // Match found. Replace abbreviation with its expansion
 	    let textBefore = text.substring(0,startPos - wordBeforeSpace.length);
 	    let textAfter = text.substring(startPos);
@@ -127,7 +127,7 @@ var init = function () {
 	finalResponse.addEventListener('keyup', checkForAbbrev);
 
 	function keyupAutosize(){
-	    console.log("keyup event called");
+	    //console.log("keyup event called");
 	    var el = this;
 	    setTimeout(function(){
 		autosize(el);
@@ -165,7 +165,7 @@ var init = function () {
 	    startButton.disabled = false;
 	    stopButton.disabled = true;
 	    document.getElementById("micimage").src = "js/mic.gif";
-	    console.log("'onend' called!");
+	    //console.log("'onend' called!");
 	};
 	
 	recognition.onerror = function(event) {
@@ -198,7 +198,7 @@ var init = function () {
 
     
     // Init abbrev hash table from server
-    initAbbrevTable();
+    loadAbbrevTable();
     
     
     // Bootstrap already has JQuery as a dependancy
@@ -208,10 +208,10 @@ var init = function () {
 	let row = $(this);
 	//let row = row0[0];
 	let dts = row.children('td');
-	console.log("KLIKKETIKLIKK ++", dts);
-	console.log("KLIKKETIKLIKK --", dts[0]);
-	console.log("KLIKKETIKLIKK --", dts[1]);
-	console.log("---------------------");
+	//console.log("KLIKKETIKLIKK ++", dts);
+	//console.log("KLIKKETIKLIKK --", dts[0]);
+	//console.log("KLIKKETIKLIKK --", dts[1]);
+	//console.log("---------------------");
     } );
     
     
@@ -231,8 +231,12 @@ var init = function () {
 	};
 	
 	abbrevMap[abbrev] = expansion;
-	// TODO Send to server to persist
 	
+	// TODO Nested async calls: NOT NICE, change to promises instead
+	//addAbbrev contains a(n async) call to loadAbbrevTable();
+	
+	addAbbrev(abbrev, expansion);	
+
 	
 	//console.log("abbrev", abbrev);
 	//console.log("expansion", expansion);
@@ -243,14 +247,68 @@ var init = function () {
 
 // Asks sever for list of persited abbrevisations, and fills in the
 // clients hashmap
-function initAbbrevTable() {
+function loadAbbrevTable() {
     let xhr = new XMLHttpRequest();
+    
+    xhr.onload = function() {
+	if ( xhr.readyState === 4 && 
+     	     xhr.status === 200) {
+	    
+	    // TODO Catch errors here
+	    let serverAbbrevs = JSON.parse(xhr.responseText);
+	    //console.log("#######", serverAbbrevs);
+	    abbrevMap = {};
+	    for (var i = 0; i < serverAbbrevs.length; i++) {
+		//console.log("i: ", i, serverAbbrevs[i]);
+		let a = serverAbbrevs[i];
+		abbrevMap[a.abbrev] = a.expansion;
+	    };
+	    updateAbbrevTable();
+	    
+	};
+    };
+    
     xhr.open("GET", baseURL+ "list_abbrevs" , true)
+    xhr.send();
 };
+
+function updateAbbrevTable() {
+    let at = document.getElementById("abbrev_table_body");
+    at.innerHTML = '';
+    Object.keys(abbrevMap).forEach(function(k) {
+	let v = abbrevMap[k];
+	let tr = document.createElement('tr');
+	let td1 = document.createElement('td');
+	let td2 = document.createElement('td');
+
+	td1.innerText = k;
+	td2.innerText = v;
+	
+	tr.appendChild(td1);
+	tr.appendChild(td2);
+	at.appendChild(tr);
+    });
+    
+    
+}
 
 function addAbbrev(abbrev, expansion) {
     let xhr = new XMLHttpRequest();
+    
+    //TODO Notify user of response
+    // TODO error handling
+    
+    xhr.onload = function(resp) {
+	//console.log("RESP", resp);
+
+	// TODO Show response in client
+	
+	// TODO Nested async calls: NOT NICE, change to promises instead
+	loadAbbrevTable();
+    };
+    
     xhr.open("GET", baseURL+ "/add_abbrev/"+ abbrev + "/"+ expansion , true)
+    xhr.send();
 };
 
 

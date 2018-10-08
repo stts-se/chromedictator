@@ -88,6 +88,7 @@ func listAbbrevs(w http.ResponseWriter, r *http.Request) {
 		res = append(res, Abbrev{Abbrev: k, Expansion: v})
 	}
 
+	//Sort abbreviations alphabetically-ish
 	sort.Slice(res, func(i, j int) bool { return res[i].Abbrev < res[j].Abbrev })
 
 	resJSON, err := json.Marshal(res)
