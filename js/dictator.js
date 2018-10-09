@@ -225,7 +225,7 @@ var init = function () {
 	    document.getElementById("msg").innerText = "Cannot add empty abbreviation";
 	    return;
 	};
-	if (abbrev === "") {
+	if (expansion === "") {
 	    document.getElementById("msg").innerText = "Cannot add empty expansion";
 	    return;
 	};
@@ -241,6 +241,30 @@ var init = function () {
 	//console.log("abbrev", abbrev);
 	//console.log("expansion", expansion);
     });
+    
+    $("#delete_abbrev_button").on('click', function(evt) {
+	let abbrev = document.getElementById("input_abbrev").value.trim();
+	
+	
+	// TODO add button should be disablem without text in both input fields, etc
+	// TODO proper validation
+	if (abbrev === "") {
+	    document.getElementById("msg").innerText = "Cannot delete empty abbreviation";
+	    return;
+	};
+	
+	delete abbrevMap[abbrev];
+	
+	// TODO Nested async calls: NOT NICE, change to promises instead
+	//addAbbrev contains a(n async) call to loadAbbrevTable();
+	
+	deleteAbbrev(abbrev);	
+
+	
+	//console.log("abbrev", abbrev);
+	//console.log("expansion", expansion);
+    });
+    
     
 };
 
@@ -310,6 +334,26 @@ function addAbbrev(abbrev, expansion) {
     xhr.open("GET", baseURL+ "/add_abbrev/"+ abbrev + "/"+ expansion , true)
     xhr.send();
 };
+function deleteAbbrev(abbrev) {
+    let xhr = new XMLHttpRequest();
+    
+    //TODO Notify user of response
+    // TODO error handling
+    
+    xhr.onload = function(resp) {
+	//console.log("RESP", resp);
+
+	// TODO Show response in client
+	
+	// TODO Nested async calls: NOT NICE, change to promises instead
+	loadAbbrevTable();
+    };
+    
+    xhr.open("GET", baseURL+ "/delete_abbrev/"+ abbrev, true)
+    xhr.send();
+};
+
+
 
 
 window.onload = init();
