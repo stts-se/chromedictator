@@ -48,8 +48,9 @@ function checkForAbbrev(evt) {
 	    let textAfter = text.substring(startPos);
 	    let expansion = abbrevMap[wordBeforeSpace.trim()];
 	    
-	    // TODO Move cursor to directly after expanded word
+	    
 	    ta.value = textBefore.trim() + " " + expansion + " " + textAfter.trim();
+	    // Move cursor to directly after expanded word + 1 (space)
 	    ta.selectionEnd =  (textBefore.trim() + " " + expansion).length + 1;
 	};
 	
