@@ -31,7 +31,8 @@ function checkForAbbrev(evt) {
     if ( evt.key === " ") {
 	// Ugh... going in circles...
 	let ta = document.getElementById("finalresponse");
-	var startPos = ta.selectionStart;
+	let startPos = ta.selectionStart;
+	let end = ta.selectionEnd;
 	
 	let text = ta.value;
 	// -1 is to remove the trailing space
@@ -49,7 +50,7 @@ function checkForAbbrev(evt) {
 	    
 	    // TODO Move cursor to directly after expanded word
 	    ta.value = textBefore.trim() + " " + expansion + " " + textAfter.trim();
-	    
+	    ta.selectionEnd =  (textBefore.trim() + " " + expansion).length + 1;
 	};
 	
 	
