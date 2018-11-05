@@ -119,3 +119,24 @@ function visualize() {
 window.onbeforeunload = function() {
     return "Are you sure you want to navigate away?";
 }
+
+
+
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function breakEverything() {
+    let divs = document.querySelectorAll("div");
+    for (var i = 1; i < divs.length; i++) {
+	var d = divs[i];
+	var style = d.getAttribute("style");
+	if (style === null || style === undefined) {
+	    style = "";
+	}
+	style = style + "; transform: rotate("+ getRandomInt(-45,45) + "deg);";
+	d.setAttribute("style", style);
+    }
+}
+
+document.getElementById("break_everything").addEventListener("click", function() { breakEverything();})
