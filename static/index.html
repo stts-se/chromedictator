@@ -6,49 +6,59 @@
     <link rel="stylesheet" type="text/css" href="look.css">
     <title>Dictator</title>
   </head>
+
   <body>
 
-    <div class="wrapper">
-    
-      <div class="application">
-	
-	<div class="header">
-	  <div>Chrome Dictator demo</div>
-	</div>
+    <div class="application">
+      
+      <div class="header content">
+	STTS | Chrome Dictator | DEMO
+      </div>
 
-	<div class="audio-view">
-	  AUDIO VIEW
-	</div>
+      <div class="audio-view content">
+	<canvas class="visualizer"></canvas> 	
+	<div id="rec_duration"></div> 	
+      </div>
 
-	<div class="buttons"> <!-- start/stop -->
-	  BUTTONS
-	</div>
+      <div class="buttons content">
+	<button class="btn" id="rec_start">Rec</button>
+	<button class="btn" id="rec_cancel">Cancel</button>
+	<button class="btn " id="rec_send">Send</button>
+      </div>
 
-	<div class="abbrevs">
-	  ABBREVS
-	</div>
+      <div class="abbrevs">
+	<div class="title">Abbrevs</div>
+	<div class="content"></div>
+      </div>
 
-	<div class="recognition-result">
-	  RECOGNITION RESULT
-	</div>
-	
-	<div class="current-utt">
-	  CURRENT UTTERANCE
-	</div>
-	
-	<div class="saved-utts">
-	  SAVED UTTERANCES	
-	</div>
-	
-	<div class="navigation">
-	  NAVIGATION (LINK TO DOCS)
-	</div>
-	
-	<div class="messages">
-	  MESSAGES
-	</div>
-	
+      <div class="recognition-result">
+	<div class="title">Recognition result</div>
+	<div class="content"></div>
       </div>
       
+      <div class="current-utt">
+	<div class="title">Current utterance</div>
+	<div class="content"></div>
+      </div>
+      
+      <div class="saved-utts">
+	<div class="title">Saved utterances</div>
+	<div class="content">	</div>
+      </div>
+      
+      <div class="navigation">
+	<div class="title">Navigation</div>
+	<div class="content"></div>
+      </div>
+      
+      <div class="messages">
+	<div class="title">Messages</div>
+	<div class="content"></div>
+      </div>
+      
+      
   </body>
+
+  <script src="dictator.js"></script>
+
 </html>
