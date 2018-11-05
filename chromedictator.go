@@ -183,7 +183,7 @@ func main() {
 	r.HandleFunc("/add_abbrev/{abbrev}/{expansion}", addAbbrev)
 	r.HandleFunc("/delete_abbrev/{abbrev}", deleteAbbrev)
 
-	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("js/"))))
+	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static/"))))
 
 	srv := &http.Server{
 		Handler:      r,
