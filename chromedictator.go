@@ -63,14 +63,7 @@ func gobFile2Map(fName string) (map[string]string, error) {
 		return nil, fmt.Errorf("gobFile2Map: gob decoding failed: %v", err)
 	}
 
-	// test
-	//fmt.Printf("%#v", m)
-
 	return m, nil
-}
-
-func index(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "./js/index.html")
 }
 
 type Abbrev struct {
@@ -150,16 +143,6 @@ func deleteAbbrev(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
-	//fn := "abbrevs_map.gob"
-	//m := map[string]string{"a": "apa", "b": "bepa", "c": "cepa", "d": "depa"}
-	//err := map2GobFile(m, fn)
-	//if err != nil {
-	//	fmt.Printf("Major disaster: %v\n", err)
-	//	return
-	//}
-
-	// Load persisted abbrev map if it exists
 	if _, err := os.Stat(abbrevFilePath); !os.IsNotExist(err) {
 
 		m, err := gobFile2Map(abbrevFilePath)
@@ -171,17 +154,13 @@ func main() {
 		abbrevs = m
 	}
 
-	//fmt.Printf("%#v\n", m2)
-
 	p := "7654"
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
-	// TODO Probably needs prefix, e.g. /dict/
-	r.HandleFunc("/", index)
-	r.HandleFunc("/list_abbrevs", listAbbrevs)
-	r.HandleFunc("/add_abbrev/{abbrev}/{expansion}", addAbbrev)
-	r.HandleFunc("/delete_abbrev/{abbrev}", deleteAbbrev)
+	r.HandleFunc("/abbrev/list", listAbbrevs)
+	r.HandleFunc("/abbrev/add/{abbrev}/{expansion}", addAbbrev)
+	r.HandleFunc("/abbrev/delete/{abbrev}", deleteAbbrev)
 
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static/"))))
 
