@@ -130,11 +130,6 @@ function breakEverything() {
     let divs = document.querySelectorAll("div");
     for (var i = 1; i < divs.length; i++) {
 	var d = divs[i];
-	//var style = d.getAttribute("style");
-	//if (style === null || style === undefined) {
-	//    style = "";
-	//}
-	//style = style + "; transform: rotate("+ getRandomInt(-45,45) + "deg);";
 	d.style["transform"] =  "rotate("+ getRandomInt(-180,180) + "deg)";
     }
 }
