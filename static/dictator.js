@@ -115,6 +115,18 @@ function visualize() {
     draw(); 
 }
 
+// payload: {"session_id": "sess1", "file_name":"sentence1", "audio_data": "GkXfo59ChoEBQ ..."}
+function soundToServer(payload) {
+
+    //if (payload.session_)
+
+    fetch().then().catch();
+    
+};
+
+// payload: {"session_id": "sess1", "file_name":"sentence1", "text_data": "My name is Prince, and I am funky..."}
+function textToServer(payload) {};
+
 
 window.onbeforeunload = function() {
     return "Are you sure you want to navigate away?";
