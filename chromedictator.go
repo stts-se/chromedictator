@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -142,6 +143,17 @@ func deleteAbbrev(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "deleted abbbreviation '%s'\n", abbrev)
 }
 
+// This is filled in by main, listing the URLs handled by the router,
+// so that these can be shown in the generated docs.
+var walkedURLs []string
+
+// TODO Use a HTML template to generate complete page?
+func generateDoc(w http.ResponseWriter, r *http.Request) {
+	s := strings.Join(walkedURLs, "\n")
+
+	fmt.Fprintf(w, "%s\n", s)
+}
+
 func main() {
 	if _, err := os.Stat(abbrevFilePath); !os.IsNotExist(err) {
 
@@ -161,6 +173,22 @@ func main() {
 	r.HandleFunc("/abbrev/list", listAbbrevs)
 	r.HandleFunc("/abbrev/add/{abbrev}/{expansion}", addAbbrev)
 	r.HandleFunc("/abbrev/delete/{abbrev}", deleteAbbrev)
+
+	r.HandleFunc("/doc/", generateDoc).Methods("GET")
+
+	// List route URLs to use as simple on-line documentation
+	docs := make(map[string]string)
+	r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		t, err := route.GetPathTemplate()
+		if err != nil {
+			return err
+		}
+		if info, ok := docs[t]; ok {
+			t = fmt.Sprintf("%s - %s", t, info)
+		}
+		walkedURLs = append(walkedURLs, t)
+		return nil
+	})
 
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("static/"))))
 
