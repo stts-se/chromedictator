@@ -1,26 +1,25 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 )
 
-//func js(w http.ResponseWriter, r *http.Request) {
-//	http.ServeFile(w, r, "./js/dictator.js")
-//}
-
 var abbrevFilePath = "abbrevs.gob"
 var abbrevs = make(map[string]string)
-var mutex = &sync.RWMutex{}
+var abbrevMutex = &sync.RWMutex{}
 
 func persistAbbrevs() error {
 	return map2GobFile(abbrevs, abbrevFilePath)
@@ -28,8 +27,8 @@ func persistAbbrevs() error {
 
 func map2GobFile(m map[string]string, fName string) error {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	abbrevMutex.Lock()
+	defer abbrevMutex.Unlock()
 
 	fh, err := os.OpenFile(fName, os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
@@ -48,8 +47,8 @@ func map2GobFile(m map[string]string, fName string) error {
 
 func gobFile2Map(fName string) (map[string]string, error) {
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	abbrevMutex.Lock()
+	defer abbrevMutex.Unlock()
 
 	fh, err := os.Open(fName)
 	if err != nil {
@@ -75,8 +74,8 @@ type Abbrev struct {
 func listAbbrevs(w http.ResponseWriter, r *http.Request) {
 	res := []Abbrev{}
 
-	mutex.RLock()
-	defer mutex.RUnlock()
+	abbrevMutex.RLock()
+	defer abbrevMutex.RUnlock()
 
 	for k, v := range abbrevs {
 		res = append(res, Abbrev{Abbrev: k, Expansion: v})
@@ -103,9 +102,9 @@ func addAbbrev(w http.ResponseWriter, r *http.Request) {
 	expansion := params["expansion"]
 
 	// TODO Error check that abbrev doesn't already exist in map
-	mutex.Lock()
+	abbrevMutex.Lock()
 	abbrevs[abbrev] = expansion
-	mutex.Unlock() // Can't use defer here, since call below uses
+	abbrevMutex.Unlock() // Can't use defer here, since call below uses
 	// locking
 
 	// This could be done consurrently, but easier to catch errors this way
@@ -126,9 +125,9 @@ func deleteAbbrev(w http.ResponseWriter, r *http.Request) {
 	//expansion := params["expansion"]
 
 	// TODO Error check that abbrev doesn't already exist in map
-	mutex.Lock()
+	abbrevMutex.Lock()
 	delete(abbrevs, abbrev)
-	mutex.Unlock() // Can't use defer here, since call below uses
+	abbrevMutex.Unlock() // Can't use defer here, since call below uses
 	// locking
 
 	// This could be done consurrently, but easier to catch errors this way
@@ -154,7 +153,140 @@ func generateDoc(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s\n", s)
 }
 
+//type Audio struct {
+//	FileType string `json:"file_type"`
+//	Data     string `json:"data,omitempty"`
+//}
+
+type AudioObject struct {
+	SessionID string `json:"session_id"`
+	FileName  string `json:"file_name"`
+	TimeStamp string `json:"time_stamp,omitempty"`
+	//AudioData Audio  `json:"audio_data"`
+	FileType string `json:"file_type"`
+	Data     string `json:"data,omitempty"`
+}
+
+type RequestResponse struct {
+	Message string `json:"message"`
+}
+
+// Let's lock everything when writing a file
+var writeMutex = &sync.Mutex{}
+
+func saveAudio(w http.ResponseWriter, r *http.Request) {
+
+	var respMessages []string
+	// Do we need this? Taken from rec server, where this was needed for some reason
+	//w.Header().Set("Access-Control-Allow-Methods", "POST")
+	//w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+	//var body []byte
+	body, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		msg := fmt.Sprintf("failed to read request body : %v", err)
+		log.Println(msg)
+		// or return JSON response with error message?
+		//res.Message = msg
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	//TODO Error check values of Unmarshalled JSON
+	ao := AudioObject{}
+	err = json.Unmarshal(body, &ao)
+	if err != nil {
+		msg := fmt.Sprintf("failed to unmarshal incoming JSON : %v", err)
+		log.Println("[chromedictator] " + msg)
+		log.Printf("[chromedictator] incoming JSON string : %s\n", string(body))
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	var audio []byte
+	audio, err = base64.StdEncoding.DecodeString(ao.Data)
+	if err != nil {
+		msg := fmt.Sprintf("server failed to decode base 64 audio data : %v", err)
+		log.Println("[chromedictator] " + msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+
+	writeMutex.Lock()
+	defer writeMutex.Unlock()
+
+	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
+		msg := fmt.Sprintf("base dir not found: %v", err)
+		log.Println("[chromedictator] " + msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := os.Stat(path.Join(baseDir, ao.SessionID)); os.IsNotExist(err) {
+		err := os.Mkdir(path.Join(baseDir, ao.SessionID), os.ModePerm)
+		if err != nil {
+			msg := fmt.Sprintf("failed to create session ID dir : %v", err)
+			log.Println("[chromedictator] " + msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+		respMessages = append(respMessages, fmt.Sprintf("created new session id dir: '%s'", path.Join(baseDir, ao.SessionID)))
+	}
+
+	// if _, err := os.Stat(path.Join(baseDir, ao.SessionID)); os.IsNotExist(err) {
+	// 	msg := fmt.Sprintf("session ID dir not found: %v", err)
+	// 	log.Println("[chromedictator] " + msg)
+	// 	http.Error(w, msg, http.StatusInternalServerError)
+	// 	return
+	// }
+
+	audioFilePath := path.Join(baseDir, ao.SessionID, ao.FileName)
+
+	ext := strings.TrimPrefix(ao.FileType, "audio/")
+	audioFilePath = audioFilePath + "." + ext
+
+	err = ioutil.WriteFile(audioFilePath, audio, 0644)
+	if err != nil {
+		msg := fmt.Sprintf("failed to save audio file '%s' : %v", audioFilePath, err)
+		log.Println("[chromedictator] " + msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+
+	respMessages = append(respMessages, fmt.Sprintf("server saved audio file '%s'", audioFilePath))
+	resp := RequestResponse{Message: strings.Join(respMessages, " : ")}
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		msg := fmt.Sprintf("failed to marshal response struct to JSON : %v", err)
+		log.Println("[chromedictator] " + msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	fmt.Fprintf(w, "%s\n", string(respJSON))
+}
+
+// TODO Add  command line flag
+var baseDir = "audio_files"
+
 func main() {
+
+	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
+
+		err := os.Mkdir(baseDir, os.ModePerm)
+		if err != nil {
+			msg := fmt.Sprintf("failed to create base dir : %v", err)
+			log.Println("[chromedictator] " + msg)
+			log.Println("Exiting")
+			return
+		}
+
+		fmt.Fprintf(os.Stderr, "[chromdictator] created base dir '%s'\n", baseDir)
+	}
+
 	if _, err := os.Stat(abbrevFilePath); !os.IsNotExist(err) {
 
 		m, err := gobFile2Map(abbrevFilePath)
@@ -169,6 +301,8 @@ func main() {
 	p := "7654"
 	r := mux.NewRouter()
 	r.StrictSlash(true)
+
+	r.HandleFunc("/save_audio", saveAudio).Methods("POST")
 
 	r.HandleFunc("/abbrev/list", listAbbrevs)
 	r.HandleFunc("/abbrev/add/{abbrev}/{expansion}", addAbbrev)
