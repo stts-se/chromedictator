@@ -115,7 +115,16 @@ function visualize() {
     draw(); 
 }
 
-// payload: {"session_id": "sess1", "file_name":"sentence1", "audio_data": "GkXfo59ChoEBQ ..."}
+// payload: {"session_id": "sess1", "file_name":"sentence1", "data": "GkXfo59ChoEBQ ..."}
+// type AudioObject struct {
+// 	SessionID string `json:"session_id"`
+// 	FileName  string `json:"file_name"`
+// 	TimeStamp string `json:"time_stamp"`
+// 	FileType  string `json:"file_type"`
+// 	Data      string `json:"data"`
+// }
+
+
 function soundToServer(payload) {
 
     //if (payload.session_)

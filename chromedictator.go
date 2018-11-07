@@ -153,18 +153,12 @@ func generateDoc(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s\n", s)
 }
 
-//type Audio struct {
-//	FileType string `json:"file_type"`
-//	Data     string `json:"data,omitempty"`
-//}
-
 type AudioObject struct {
 	SessionID string `json:"session_id"`
 	FileName  string `json:"file_name"`
-	TimeStamp string `json:"time_stamp,omitempty"`
-	//AudioData Audio  `json:"audio_data"`
-	FileType string `json:"file_type"`
-	Data     string `json:"data,omitempty"`
+	TimeStamp string `json:"time_stamp"`
+	FileType  string `json:"file_type"`
+	Data      string `json:"data"`
 }
 
 type RequestResponse struct {
@@ -200,6 +194,31 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 		msg := fmt.Sprintf("failed to unmarshal incoming JSON : %v", err)
 		log.Println("[chromedictator] " + msg)
 		log.Printf("[chromedictator] incoming JSON string : %s\n", string(body))
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	if ao.SessionID == "" {
+		msg := "missing session_id"
+		log.Println("[chromedictator] " + msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+	if ao.FileName == "" {
+		msg := "missing file_name"
+		log.Println("[chromedictator] " + msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+	if ao.FileType == "" {
+		msg := "missing file_type"
+		log.Println("[chromedictator] " + msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+	if ao.Data == "" {
+		msg := "missing data"
+		log.Println("[chromedictator] " + msg)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
