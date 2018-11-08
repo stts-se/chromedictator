@@ -21,7 +21,7 @@ var visCanvasCtx = visCanvas.getContext("2d");
 
 var recStart;
 
-
+//var audioBlob;
 
 window.onload = function () {
     
@@ -39,15 +39,29 @@ window.onload = function () {
 	source = audioCtx.createMediaStreamSource(stream);
         source.connect(analyser);
 	recorder = new MediaRecorder(stream);
-	// recorder = new MediaRecorder(stream);
-	// recorder.addEventListener('dataavailable', function (evt) {
-	//     updateAudio(evt.data);
-	//     sendAndReceiveBlob();
-	// });
+	recorder.addEventListener('dataavailable', function (evt) {
+	    //     updateAudio(evt.data);
+	    //     sendAndReceiveBlob();
+	    
+	    //audioBlob = evt.data;
+	    //console.log("CANCELED? ", document.getElementById("rec_cancel").disabled);
+	    //console.log("STOPPED? ", document.getElementById("rec_send").disabled);
+
+	    var audio = document.getElementById('audio');
+	    // use the blob from the MediaRecorder as source for the audio tag
+	    audio.src = URL.createObjectURL(evt.data);
+	    audio.disabled = false;
+	    
+	    console.log("FÄÄÄÄRDIIIIG! ", evt);
+	});
 	
     });
-
-    recorder 
+    
+    mediaAccess.catch(function(err) {
+	console.log("error from getUserMedia:", err);
+	alert("Couldn't initialize recorder: " + err);
+    });
+    
     
     document.getElementById("refresh_time").innerText = new Date().toLocaleString();
 }
@@ -69,12 +83,15 @@ document.getElementById("rec_start").addEventListener("click", function() {
     enable(document.getElementById("rec_cancel"));
     enable(document.getElementById("rec_send"));
     recStart = new Date().getTime();
+    document.getElementById("audio").src = "";
+    recorder.start();
 });
 
 document.getElementById("rec_cancel").addEventListener("click", function() {
     enable(document.getElementById("rec_start"));
     disable(document.getElementById("rec_cancel"));
     disable(document.getElementById("rec_send"));
+    recorder.stop();
     recStart = null;
 });
 
@@ -82,6 +99,7 @@ document.getElementById("rec_send").addEventListener("click", function() {
     enable(document.getElementById("rec_start"));
     disable(document.getElementById("rec_cancel"));
     disable(document.getElementById("rec_send"));
+    recorder.stop();
     recStart = null;
 });
 
