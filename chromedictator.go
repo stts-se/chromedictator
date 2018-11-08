@@ -153,12 +153,43 @@ func generateDoc(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s\n", s)
 }
 
-type AudioObject struct {
+type TextObject struct {
 	SessionID string `json:"session_id"`
 	FileName  string `json:"file_name"`
 	TimeStamp string `json:"time_stamp"`
-	FileType  string `json:"file_type"`
 	Data      string `json:"data"`
+	OverWrite bool   `json:"over_write"`
+}
+
+func (ao TextObject) validate() []string {
+	var res []string
+
+	if ao.SessionID == "" {
+		res = append(res, "missing session_id")
+	}
+	if ao.FileName == "" {
+		res = append(res, "missing file_name")
+
+	}
+	if ao.Data == "" {
+		res = append(res, "missing data")
+	}
+
+	return res
+}
+
+type AudioObject struct {
+	TextObject
+
+	FileExtension string `json:"file_extension"`
+}
+
+func (ao AudioObject) validate() []string {
+	res := ao.TextObject.validate()
+	if ao.FileExtension == "" {
+		res = append(res, "missing file_extension")
+	}
+	return res
 }
 
 type RequestResponse struct {
@@ -167,6 +198,107 @@ type RequestResponse struct {
 
 // Let's lock everything when writing a file
 var writeMutex = &sync.Mutex{}
+
+func saveRecogniserText(w http.ResponseWriter, r *http.Request) {
+	saveText(w, r, "rec")
+}
+
+func saveEditedText(w http.ResponseWriter, r *http.Request) {
+	saveText(w, r, "edi")
+}
+
+func saveText(w http.ResponseWriter, r *http.Request, ext string) {
+	var respMessages []string
+
+	var data []byte
+	if r.Method == "GET" {
+		//fmt.Println("GETTIGETTI!")
+		vars := mux.Vars(r)
+		textData := vars["text_object"]
+		if textData == "" {
+			msg := "no text to save"
+			log.Println("[chromedictator] " + msg)
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		}
+		data = []byte(textData)
+	}
+
+	if r.Method == "POST" {
+		//fmt.Println("POSTIPOSTI!")
+		// Different var names to avoid shadowing
+		data0, err := ioutil.ReadAll(r.Body)
+		data = data0
+		if err != nil {
+			msg := fmt.Sprintf("failed to read request body : %v", err)
+			log.Println(msg)
+			// or return JSON response with error message?
+			//res.Message = msg
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		}
+	}
+
+	to := TextObject{}
+	err := json.Unmarshal(data, &to)
+	if err != nil {
+		msg := fmt.Sprintf("failed to unmarshal incoming JSON '%s' : %v", string(data), err)
+		log.Println("[chromedictator] " + msg)
+		//log.Printf("[chromedictator] failed to incoming JSON string : %s\n", string(data))
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	vali := to.validate()
+	if len(vali) > 0 {
+		msg := fmt.Sprintf("incomin JSON not valid: %s", strings.Join(vali, " : "))
+		log.Println(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	textFilePath := path.Join(baseDir, to.SessionID, to.FileName) + "." + ext
+
+	writeMutex.Lock()
+	defer writeMutex.Unlock()
+
+	if _, err := os.Stat(textFilePath); !os.IsNotExist(err) {
+		if !to.OverWrite {
+			msg := fmt.Sprintf("file with the same session ID and file name already exists: %s/%s.%s\nTo overwrite set over_write:true", to.SessionID, to.FileName, ext)
+
+			log.Println(msg)
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		} else {
+			msg := fmt.Sprintf("over writing existing file '%s/%s.%s'", to.SessionID, to.FileName, ext)
+			respMessages = append(respMessages, msg)
+		}
+	}
+
+	err = ioutil.WriteFile(textFilePath, []byte(to.Data+"\n"), 0644)
+	if err != nil {
+		msg := fmt.Sprintf("failed to create file '%s' : %v", textFilePath, err)
+		log.Println(msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+
+	respMessages = append(respMessages, fmt.Sprintf("saved text file '%s'", textFilePath))
+	resp := RequestResponse{Message: strings.Join(respMessages, " : ")}
+
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		msg := fmt.Sprintf("failed to marshal response struct to JSON : %v", err)
+		log.Println("[chromedictator] " + msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	fmt.Fprintf(w, "%s\n", string(respJSON))
+
+}
 
 func saveAudio(w http.ResponseWriter, r *http.Request) {
 
@@ -187,7 +319,6 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//TODO Error check values of Unmarshalled JSON
 	ao := AudioObject{}
 	err = json.Unmarshal(body, &ao)
 	if err != nil {
@@ -198,29 +329,13 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if ao.SessionID == "" {
-		msg := "missing session_id"
+	vali := ao.validate()
+	if len(vali) > 0 {
+		msg := "Incomplete incoming JSON: " + strings.Join(vali, " : ")
 		log.Println("[chromedictator] " + msg)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
-	}
-	if ao.FileName == "" {
-		msg := "missing file_name"
-		log.Println("[chromedictator] " + msg)
-		http.Error(w, msg, http.StatusBadRequest)
-		return
-	}
-	if ao.FileType == "" {
-		msg := "missing file_type"
-		log.Println("[chromedictator] " + msg)
-		http.Error(w, msg, http.StatusBadRequest)
-		return
-	}
-	if ao.Data == "" {
-		msg := "missing data"
-		log.Println("[chromedictator] " + msg)
-		http.Error(w, msg, http.StatusBadRequest)
-		return
+
 	}
 
 	var audio []byte
@@ -262,9 +377,23 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 
 	audioFilePath := path.Join(baseDir, ao.SessionID, ao.FileName)
 
-	ext := strings.TrimPrefix(ao.FileType, "audio/")
+	ext := strings.TrimPrefix(ao.FileExtension, ".")
 	audioFilePath = audioFilePath + "." + ext
 
+	fmt.Printf("Server saves %s\n", audioFilePath)
+
+	if _, err := os.Stat(audioFilePath); !os.IsNotExist(err) {
+		if !ao.OverWrite {
+			msg := fmt.Sprintf("file with the same session ID and file name already exists: %s/%s.%s\nTo overwrite set over_write:true", ao.SessionID, ao.FileName, ao.FileExtension)
+
+			log.Println(msg)
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		} else {
+			msg := fmt.Sprintf("over writing existing file '%s/%s.%s'", ao.SessionID, ao.FileName, ao.FileExtension)
+			respMessages = append(respMessages, msg)
+		}
+	}
 	err = ioutil.WriteFile(audioFilePath, audio, 0644)
 	if err != nil {
 		msg := fmt.Sprintf("failed to save audio file '%s' : %v", audioFilePath, err)
@@ -274,6 +403,7 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respMessages = append(respMessages, fmt.Sprintf("server saved audio file '%s'", audioFilePath))
+	// TODO Copypaste
 	resp := RequestResponse{Message: strings.Join(respMessages, " : ")}
 	respJSON, err := json.Marshal(resp)
 	if err != nil {
@@ -322,6 +452,10 @@ func main() {
 	r.StrictSlash(true)
 
 	r.HandleFunc("/save_audio", saveAudio).Methods("POST")
+	r.HandleFunc("/save_recogniser_text", saveRecogniserText).Methods("POST")
+	r.HandleFunc("/save_edited_text", saveEditedText).Methods("POST")
+	r.HandleFunc("/save_recogniser_text/{text_object}", saveRecogniserText).Methods("GET")
+	r.HandleFunc("/save_edited_text/{text_object}", saveEditedText).Methods("GET")
 
 	r.HandleFunc("/abbrev/list", listAbbrevs)
 	r.HandleFunc("/abbrev/add/{abbrev}/{expansion}", addAbbrev)
