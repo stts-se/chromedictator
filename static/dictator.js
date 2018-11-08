@@ -1,6 +1,15 @@
 "use strict";
 
+
+
+// See e.g.:
+// https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API 
+// https://mozdevs.github.io/MediaRecorder-examples/record-live-audio.html
+// https://github.com/mdn/voice-change-o-matic
+// https://github.com/mdn/voice-change-o-matic/blob/gh-pages/scripts/app.js
+
 var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+var recorder; 
 
 var analyser = audioCtx.createAnalyser();
 analyser.minDecibels = -90;
@@ -11,6 +20,8 @@ var visCanvas = document.querySelector('.visualizer');
 var visCanvasCtx = visCanvas.getContext("2d");
 
 var recStart;
+
+
 
 window.onload = function () {
     
@@ -27,6 +38,7 @@ window.onload = function () {
 	visualize();
 	source = audioCtx.createMediaStreamSource(stream);
         source.connect(analyser);
+	recorder = new MediaRecorder(stream);
 	// recorder = new MediaRecorder(stream);
 	// recorder.addEventListener('dataavailable', function (evt) {
 	//     updateAudio(evt.data);
@@ -34,6 +46,8 @@ window.onload = function () {
 	// });
 	
     });
+
+    recorder 
     
     document.getElementById("refresh_time").innerText = new Date().toLocaleString();
 }

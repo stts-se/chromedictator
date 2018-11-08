@@ -17,6 +17,7 @@ import (
 	"time"
 )
 
+// TODO Hardwired GOB file should be changed to text file
 var abbrevFilePath = "abbrevs.gob"
 var abbrevs = make(map[string]string)
 var abbrevMutex = &sync.RWMutex{}
@@ -66,6 +67,7 @@ func gobFile2Map(fName string) (map[string]string, error) {
 	return m, nil
 }
 
+// Abbrev is a tuple holding an abbreviation and its expansion.
 type Abbrev struct {
 	Abbrev    string `json:"abbrev"`
 	Expansion string `json:"expansion"`
@@ -142,17 +144,7 @@ func deleteAbbrev(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "deleted abbbreviation '%s'\n", abbrev)
 }
 
-// This is filled in by main, listing the URLs handled by the router,
-// so that these can be shown in the generated docs.
-var walkedURLs []string
-
-// TODO Use a HTML template to generate complete page?
-func generateDoc(w http.ResponseWriter, r *http.Request) {
-	s := strings.Join(walkedURLs, "\n")
-
-	fmt.Fprintf(w, "%s\n", s)
-}
-
+// TextObject holds values that can be used to produce a text file
 type TextObject struct {
 	SessionID string `json:"session_id"`
 	FileName  string `json:"file_name"`
@@ -178,6 +170,7 @@ func (ao TextObject) validate() []string {
 	return res
 }
 
+// AudioObject holds values that can be used to produce an audio file
 type AudioObject struct {
 	TextObject
 
@@ -192,6 +185,7 @@ func (ao AudioObject) validate() []string {
 	return res
 }
 
+// RequestResponse is used to marshal into JSON and return as a response to an HTTP request
 type RequestResponse struct {
 	Message string `json:"message"`
 }
@@ -212,7 +206,6 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 
 	var data []byte
 	if r.Method == "GET" {
-		//fmt.Println("GETTIGETTI!")
 		vars := mux.Vars(r)
 		textData := vars["text_object"]
 		if textData == "" {
@@ -225,15 +218,12 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 	}
 
 	if r.Method == "POST" {
-		//fmt.Println("POSTIPOSTI!")
 		// Different var names to avoid shadowing
 		data0, err := ioutil.ReadAll(r.Body)
 		data = data0
 		if err != nil {
 			msg := fmt.Sprintf("failed to read request body : %v", err)
 			log.Println(msg)
-			// or return JSON response with error message?
-			//res.Message = msg
 			http.Error(w, msg, http.StatusBadRequest)
 			return
 		}
@@ -244,7 +234,6 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 	if err != nil {
 		msg := fmt.Sprintf("failed to unmarshal incoming JSON '%s' : %v", string(data), err)
 		log.Println("[chromedictator] " + msg)
-		//log.Printf("[chromedictator] failed to incoming JSON string : %s\n", string(data))
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
@@ -301,13 +290,8 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 }
 
 func saveAudio(w http.ResponseWriter, r *http.Request) {
-
 	var respMessages []string
-	// Do we need this? Taken from rec server, where this was needed for some reason
-	//w.Header().Set("Access-Control-Allow-Methods", "POST")
-	//w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
-	//var body []byte
 	body, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
@@ -368,13 +352,6 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 		respMessages = append(respMessages, fmt.Sprintf("created new session id dir: '%s'", path.Join(baseDir, ao.SessionID)))
 	}
 
-	// if _, err := os.Stat(path.Join(baseDir, ao.SessionID)); os.IsNotExist(err) {
-	// 	msg := fmt.Sprintf("session ID dir not found: %v", err)
-	// 	log.Println("[chromedictator] " + msg)
-	// 	http.Error(w, msg, http.StatusInternalServerError)
-	// 	return
-	// }
-
 	audioFilePath := path.Join(baseDir, ao.SessionID, ao.FileName)
 
 	ext := strings.TrimPrefix(ao.FileExtension, ".")
@@ -416,6 +393,17 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	fmt.Fprintf(w, "%s\n", string(respJSON))
+}
+
+// This is filled in by main, listing the URLs handled by the router,
+// so that these can be shown in the generated docs.
+var walkedURLs []string
+
+// TODO Use a HTML template to generate complete page?
+func generateDoc(w http.ResponseWriter, r *http.Request) {
+	s := strings.Join(walkedURLs, "\n")
+
+	fmt.Fprintf(w, "%s\n", s)
 }
 
 // TODO Add  command line flag
