@@ -13,16 +13,16 @@ var visCanvasCtx = visCanvas.getContext("2d");
 var recStart;
 
 window.onload = function () {
-
+    
     disable(document.getElementById('rec_cancel'));
     disable(document.getElementById('rec_send'));
     
     var url = new URL(document.URL);
     var source;
     var stream;
-
+    
     var mediaAccess = navigator.mediaDevices.getUserMedia({'audio': true, video: false});
-
+    
     mediaAccess.then(function(stream) {
 	visualize();
 	source = audioCtx.createMediaStreamSource(stream);
@@ -34,6 +34,8 @@ window.onload = function () {
 	// });
 	
     });
+    
+    document.getElementById("refresh_time").innerText = new Date().toLocaleString();
 }
 
 function disable(element) {
