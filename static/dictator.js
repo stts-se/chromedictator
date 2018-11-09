@@ -97,6 +97,8 @@ window.onload = function () {
     
     
     document.getElementById("refresh_time").innerText = new Date().toLocaleString();
+    
+    document.getElementById("current-utt").focus();
 }
 
 function disable(element) {
@@ -218,9 +220,19 @@ async function soundToServer(payload) {
 	
 	const content = await rawResponse.text();
 	console.log(content);
+	try {
+	    const json = JSON.parse(content);
+	    logMessage("info", json.message);
+	} catch {
+	    logMessage("error", content);
+	}
 	
     })();
 };
+
+function logMessage(title, text) {
+    document.getElementById("messages").textContent = title + ": " + text;    
+}
 
 // payload: {"session_id": "sess1", "file_name":"sentence1", "text_data": "My name is Prince, and I am funky..."}
 function textToServer(payload) {};
@@ -257,5 +269,23 @@ function unbreakEverything() {
     document.getElementById("unbreak_everything").style["display"] = "none";
 }
 
+const enterKeyCode = 13;
+function saveOnCtrlEnter() {
+    if (event.ctrlKey && event.keyCode === enterKeyCode) {
+	var src = event.srcElement
+	console.log(src);
+	var text = src.value.trim();
+	if (text.length > 0) {
+	    var saved = document.getElementById("saved-utts");
+	    var div = document.createElement("div")
+	    saved.appendChild(div);
+	    div.textContent = text;
+	    src.value = "";
+	    logMessage("info", "added text '" + text + "'");
+	}
+    }
+}
+
 document.getElementById("break_everything").addEventListener("click", function() { breakEverything();})
 document.getElementById("unbreak_everything").addEventListener("click", function() { unbreakEverything();})
+document.getElementById("current-utt").addEventListener("keyup", function() { saveOnCtrlEnter();})

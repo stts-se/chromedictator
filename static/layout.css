@@ -28,7 +28,6 @@
 }
 
 .leftpane {
-    display: grid;
     grid-column: 2;
     grid-row: 2;
 }
@@ -60,25 +59,25 @@
 }
 
 
+#current-utt {
+    margin-top: 2em;
+    width: 100%;
+    padding: 0.5em;
+}
+
+
+
 /* LEFT PANE */
 .audio .buttons {
     text-align: center;
 }
 
 .audio {
-    grid-column:2;
-    grid-row:2;
     display: grid;
     grid-gap: 0.5em;
     grid-auto-columns: auto;
     grid-auto-rows: minmax(60px, auto) auto;
     text-align: center;
-}
-
-.visualizer {
-    grid-column: 1;
-    grid-row: 1;
-    justify-self: center;
 }
 
 .audio-view #rec_duration {

@@ -9,7 +9,7 @@
 
     <body>
 
-	<div class="application resizable">
+	<div class="application resizable selected-font">
 	    
 	    <div class="header content panel">
 		<div class="headertxt">
@@ -36,19 +36,31 @@
 		<div class="textpane panel">
 		    <div class="title">Text</div>
 		    <div class="content">
-			<div class="saved-utts">
-			    Det var en gång en apa.<br/>
-			    Apan hette Nisse.	    
+			<div class="resizable" id="saved-utts">
+
+			    <div>
+				Quisque egestas diam in arcu.
+			    </div>
+			    <div>
+				Et malesuada fames ac turpis.
+			    </div>
+			    <div>
+				Turpis tincidunt id aliquet risus!
+			    </div>
+			    <div>
+				Aliquet sagittis id consectetur purus.
+			    </div>
+			    <div>
+				Nascetur ridiculus mus mauris vitae.
+			    </div>
 			</div>
-			<div class="current-utt">    
-			    En dag skulle apan...
-			</div>
+			<textarea class="selected-font" id="current-utt">Morbi tristique senectus et...</textarea>
 		    </div>
 		    
 		    <div class="recognition-result">
 			<div class="title">Recognition result</div>
 			<div class="content">
-			    En dag skulle ulle apan gapan...
+			    Morbi tri- tristique sene- senectus et...
 			</div>
 		    </div>
 		</div>
