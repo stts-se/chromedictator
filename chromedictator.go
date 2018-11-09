@@ -354,7 +354,7 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 
 	audioFilePath := path.Join(baseDir, ao.SessionID, ao.FileName)
 
-	ext := strings.TrimPrefix(ao.FileExtension, ".")
+	ext := strings.TrimPrefix(ao.FileExtension, "audio/")
 	audioFilePath = audioFilePath + "." + ext
 
 	fmt.Printf("Server saves %s\n", audioFilePath)
