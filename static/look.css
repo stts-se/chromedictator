@@ -79,7 +79,9 @@
     resize: both;
 }
 
-.recognition-result .content {
+#recognition-result .content {
     color: #404040;
     font-style: italic;
 }
+
+

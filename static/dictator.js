@@ -9,7 +9,8 @@
 // https://github.com/mdn/voice-change-o-matic/blob/gh-pages/scripts/app.js
 
 var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-var recorder; 
+var recorder;
+var recognition;
 
 var analyser = audioCtx.createAnalyser();
 analyser.minDecibels = -90;
@@ -21,6 +22,11 @@ var visCanvasCtx = visCanvas.getContext("2d");
 
 var recStart;
 
+const recStartButton = document.getElementById("rec_start");
+const recSendButton = document.getElementById("rec_send");
+const recCancelButton = document.getElementById("rec_cancel");
+const sessionName = document.getElementById("sessionname");
+
 // TODO
 var baseURL = window.origin;
 
@@ -30,10 +36,73 @@ var sendAudio = false;
 
 window.onload = function () {
     
-    disable(document.getElementById('rec_cancel'));
-    disable(document.getElementById('rec_send'));
+    disable(recCancelButton);
+    disable(recSendButton);
     
     var url = new URL(document.URL);
+    var session = url.searchParams.get('session')
+    if (session != null && session != "") {
+	sessionName.value = session;
+    }
+
+    
+    // google speech rec
+    if (!('webkitSpeechRecognition' in window)) {
+	alert("This browser does not support webkit speech recognition. Try Google Chrome.");
+	return;
+    };
+
+    recognition = new webkitSpeechRecognition();
+    let tempResponse = document.querySelector("#recognition-result .content");
+    let finalResponse = document.getElementById("current-utt");
+    // finalResponse.addEventListener('keyup', checkForAbbrev);
+    // finalResponse.addEventListener('keyup', singnalUnsavedEdit);
+    recognition.lang = "sv";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    
+    recognition.onresult = function(event) {
+	for (var i = event.resultIndex; i < event.results.length; ++i) {
+	    let text = event.results[i][0].transcript.trim();
+	    if (event.results[i].isFinal) {
+	    	finalResponse.value = text.trim();
+	    	tempResponse.innerHTML = '';
+		
+	    } else {
+		tempResponse.innerHTML = event.results[i][0].transcript;
+	    }
+	}
+    };    
+    
+    recognition.onend = function() {
+	// TODO?
+	console.log("recognition.onend");
+	enable(recStartButton);
+	disable(recSendButton);
+	disable(recCancelButton);
+    };
+    
+    recognition.onerror = function(event) {
+	if (event.error === 'no-speech') {
+	    logMessage("error", "No speech input");	    
+	} else if (event.error === 'audio-capture') {
+	    logMessage("error", "Microphone failure");	    	    
+	} else if (event.error === 'not-allowed') {
+	    if (event.timeStamp - start_timestamp < 100) {
+		logMessage("error", "Audio blocked");	    	    
+	    } else {
+		logMessage("error", "Audio denied");	    	    
+	    }	    
+	} else if (event.error === 'network') {
+	    logMessage("error", "Network error");	    	    
+	} else if (event.error === 'aborted') {
+	    logMessage("info", "Recording aborted");	    	    
+	} else {
+	    logMessage("info", "Recording got error '" + event.error + "'");
+	}
+    };
+
+    
     var source;
     var stream;
     
@@ -49,8 +118,8 @@ window.onload = function () {
 	    //     sendAndReceiveBlob();
 	    
 	    //audioBlob = evt.data;
-	    //console.log("CANCELED? ", document.getElementById("rec_cancel").disabled);
-	    //console.log("STOPPED? ", document.getElementById("rec_send").disabled);
+	    //console.log("CANCELED? ", recCancelButton.disabled);
+	    //console.log("STOPPED? ", recSendButton.disabled);
 	    
 	    
 	    // use the blob from the MediaRecorder as source for the audio tag
@@ -64,17 +133,21 @@ window.onload = function () {
 	    audio.disabled = false;
 	    
 	    if (sendAudio) {
-
-
-		
 		let blob = await fetch(ou).then(r => r.blob());
 		console.log("EN BLÅBB ", blob);
+
+		let sess = sessionName.value.trim();
+		if (sess.length === 0) {
+		    logMessage("error","cannot send audio with empty session id");
+		    return;
+		}
+
 		
 		let reader = new FileReader();
 		reader.addEventListener("loadend", function() {
 		    let rez = reader.result;
 		    let payload = {
-			"session_id" :"snorkfroeken",
+			"session_id" : sess,
 			"file_name" : "apmamman",
 			"data" : btoa(rez),
 			"file_extension" : blob.type,
@@ -97,6 +170,8 @@ window.onload = function () {
     
     
     document.getElementById("refresh_time").innerText = new Date().toLocaleString();
+
+    validateSessionName();
     
     document.getElementById("current-utt").focus();
 }
@@ -110,22 +185,25 @@ function enable(element) {
 }
 
 function doRecord() {
-    return document.getElementById('rec_start').disabled;
+    return recStartButton.disabled;
 }
 
-document.getElementById("rec_start").addEventListener("click", function() {
-    disable(document.getElementById("rec_start"));
-    enable(document.getElementById("rec_cancel"));
-    enable(document.getElementById("rec_send"));
+recStartButton.addEventListener("click", function() {
+    recognition.start();
+    disable(recStartButton);
+    enable(recCancelButton);
+    enable(recSendButton);
     recStart = new Date().getTime();
     //document.getElementById("audio").src = null; // Is this how you empty the src? 
     recorder.start();
+    logMessage("info", "Recording started");
 });
 
-document.getElementById("rec_cancel").addEventListener("click", function() {
-    enable(document.getElementById("rec_start"));
-    disable(document.getElementById("rec_cancel"));
-    disable(document.getElementById("rec_send"));
+recCancelButton.addEventListener("click", function() {
+    recognition.abort();
+    enable(recStartButton);
+    disable(recCancelButton);
+    disable(recSendButton);
     sendAudio = false;
     recorder.stop();
     recStart = null;
@@ -134,10 +212,11 @@ document.getElementById("rec_cancel").addEventListener("click", function() {
 
 var currentBlobURL = null;
 
-document.getElementById("rec_send").addEventListener("click", function() {
-    enable(document.getElementById("rec_start"));
-    disable(document.getElementById("rec_cancel"));
-    disable(document.getElementById("rec_send"));
+recSendButton.addEventListener("click", function() {
+    recognition.stop();
+    enable(recStartButton);
+    disable(recCancelButton);
+    disable(recSendButton);
     sendAudio = true;
     recorder.stop();
     
@@ -231,6 +310,7 @@ async function soundToServer(payload) {
 };
 
 function logMessage(title, text) {
+    console.log(title, text);
     document.getElementById("messages").textContent = title + ": " + text;    
 }
 
@@ -269,9 +349,11 @@ function unbreakEverything() {
     document.getElementById("unbreak_everything").style["display"] = "none";
 }
 
-const enterKeyCode = 13;
+const keyCodeEnter = 13;
+const keyCodeSpace = 32;
+const keyCodeEscape = 27;
 function saveOnCtrlEnter() {
-    if (event.ctrlKey && event.keyCode === enterKeyCode) {
+    if (event.ctrlKey && event.keyCode === keyCodeEnter) {
 	var src = event.srcElement
 	console.log(src);
 	var text = src.value.trim();
@@ -286,6 +368,33 @@ function saveOnCtrlEnter() {
     }
 }
 
+function globalShortcuts() {
+    if (event.keyCode === keyCodeEscape && !recCancelButton.disabled) {
+	recCancelButton.click();
+    }
+    if (event.ctrlKey && event.keyCode === keyCodeSpace) {
+	if (!recSendButton.disabled)
+	    recSendButton.click();
+	else if  (!recStartButton.disabled) {
+	    recStartButton.click();
+	}
+    }
+    
+}
+
+
+function validateSessionName() {
+    if (sessionName.value.trim().length > 0)
+	enable(recStartButton);
+    else
+	disable(recStartButton);
+}
+
 document.getElementById("break_everything").addEventListener("click", function() { breakEverything();})
 document.getElementById("unbreak_everything").addEventListener("click", function() { unbreakEverything();})
 document.getElementById("current-utt").addEventListener("keyup", function() { saveOnCtrlEnter();})
+
+document.addEventListener("keyup", function() { globalShortcuts() });
+
+sessionName.addEventListener("keyup", function() { validateSessionName() });
+sessionName.addEventListener("change", function() { validateSessionName() });

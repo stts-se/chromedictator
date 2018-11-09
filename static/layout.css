@@ -30,6 +30,8 @@
 .leftpane {
     grid-column: 2;
     grid-row: 2;
+    display: grid;
+    grid-gap: 0.5em;
 }
 
 .centerpane {
@@ -43,6 +45,7 @@
     display: grid;
     grid-column: 2/4;
     grid-row: 3;
+    grid-template-columns: auto;
     grid-gap: 0.5em;    
 }
 
@@ -65,6 +68,10 @@
     padding: 0.5em;
 }
 
+#sessionname {
+    width: 100%;
+}
+
 
 
 /* LEFT PANE */
@@ -72,7 +79,7 @@
     text-align: center;
 }
 
-.audio {
+.audio .content {
     display: grid;
     grid-gap: 0.5em;
     grid-auto-columns: auto;
@@ -84,7 +91,7 @@
     text-align: center;
     justify-self: center;
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1;
 }
 
 
@@ -94,9 +101,14 @@
     grid-row: 1;
 }
 
-.menu {
+.shortcuts {
     grid-column: 1;
     grid-row: 2;
+}
+
+.menu {
+    grid-column: 1;
+    grid-row: 3;
 }
 
 
