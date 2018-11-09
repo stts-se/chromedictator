@@ -5,7 +5,6 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 // TODO Hardwired GOB file should be changed to text file
@@ -259,7 +260,7 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 			http.Error(w, msg, http.StatusBadRequest)
 			return
 		} else {
-			msg := fmt.Sprintf("over writing existing file '%s/%s.%s'", to.SessionID, to.FileName, ext)
+			msg := fmt.Sprintf("overwriting existing file '%s/%s.%s'", to.SessionID, to.FileName, ext)
 			respMessages = append(respMessages, msg)
 		}
 	}
@@ -367,7 +368,7 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, msg, http.StatusBadRequest)
 			return
 		} else {
-			msg := fmt.Sprintf("over writing existing file '%s/%s.%s'", ao.SessionID, ao.FileName, ao.FileExtension)
+			msg := fmt.Sprintf("overwriting existing file '%s/%s.%s'", ao.SessionID, ao.FileName, ao.FileExtension)
 			respMessages = append(respMessages, msg)
 		}
 	}
