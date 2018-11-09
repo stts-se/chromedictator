@@ -231,7 +231,6 @@ window.onbeforeunload = function() {
 }
 
 
-
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -240,7 +239,9 @@ function breakEverything() {
     let divs = document.querySelectorAll("div");
     for (var i = 1; i < divs.length; i++) {
 	var d = divs[i];
-	d.style["transform"] =  "rotate("+ getRandomInt(-180,180) + "deg)";
+	var c = d.getAttribute("class")
+	if (c !== null && c.indexOf("nobreak") < 0)
+	    d.style["transform"] =  "rotate("+ getRandomInt(-180,180) + "deg)";
     }
     document.getElementById("unbreak_everything").style["display"] = "";
     document.getElementById("break_everything").style["display"] = "none";

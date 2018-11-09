@@ -4,8 +4,8 @@
 }
 
 .title {
-  animation-duration: 3s;
-  animation-name: slidein;
+    animation-duration: 3s;
+    animation-name: slidein;
 }
 
 @keyframes slidein {
@@ -26,6 +26,7 @@
 }
 
 .btn {
+    text-decoration: none;
     color: #007bff;
     background-color: transparent;
     background-image: none;
@@ -61,7 +62,15 @@
 }
 
 .visualizer {
-    border: 1pt solid transparent;
-    border-color: #eee;
     border-radius: .50rem;
+}
+
+.resizable {
+    overflow: auto;
+    resize: both;
+}
+
+.recognition-result .content {
+    color: #404040;
+    font-style: italic;
 }
