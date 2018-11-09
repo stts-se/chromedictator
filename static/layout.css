@@ -1,14 +1,9 @@
-body {
-    display: grid;
-    background: #ddd;
-}
-
 .application {
     display: grid;
-    grid-template-columns:  minmax(150px, auto) minmax(auto, 1200px);
+    /* grid-template-columns:  minmax(150px, auto) minmax(auto, 1200px); */
+    grid-template-columns: 1fr minmax(150px, auto) minmax(auto, 1200px) 1fr;
     grid-gap:1em;
     grid-auto-rows: minmax(100px, auto) minmax(100px, auto) minmax(100px, auto) minmax(300px, auto) minmax(100px, auto);
-    justify-self: center;
 }
 
 .application > div{
@@ -18,7 +13,7 @@ body {
 }
 
 .header {
-    grid-column:1/3;
+    grid-column:2/4;
     grid-row:1;
     text-align: center;
     vertical-align: middle;
@@ -27,53 +22,63 @@ body {
 }
 
 .audio-view {
-    grid-column:1;
+    grid-column:2;
     grid-row:2;
+    display: grid;
+    grid-gap:0.5em;
+    grid-auto-columns: auto;
+    grid-auto-rows: minmax(60px, auto) auto;
 }
 
 .audio-view .visualizer {
     height: 60px;
-    width: 200px;
+    width: 150px;
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: center;
 }
 
 .audio-view #rec_duration {
     text-align: center;
+    justify-self: center;
+    grid-column: 1;
+    grid-row: 2;
 }
-    
+
 .buttons {
-    grid-column:1;
+    grid-column:2;
     grid-row:3;
 }
 
 
 .abbrevs {
-    grid-column:1;
+    grid-column:2;
     grid-row:4;
 }
 
 .navigation {
-    grid-column:1/3;
+    grid-column:2/4;
     grid-row:6;
 }
 
 .messages {
-    grid-column:1/3;
+    grid-column:2/4;
     grid-row:5;
 }
 
 .recognition-result {
-    grid-column:2/3;
+    grid-column:3/4;
     grid-row:2;
 }
 
 .current-utt {
-    grid-column:2/3;
+    grid-column:3/4;
     grid-row:3;
     display: grid;
 }
 
 .saved-utts {
-    grid-column:2/3;
+    grid-column:3/4;
     grid-row:4;
 }
 

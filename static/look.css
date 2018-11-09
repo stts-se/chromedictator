@@ -59,3 +59,9 @@
     color: grey;
     border-color: grey !important;
 }
+
+.visualizer {
+    border: 1pt solid transparent;
+    border-color: #eee;
+    border-radius: .50rem;
+}

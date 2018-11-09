@@ -187,6 +187,19 @@ function breakEverything() {
 	var d = divs[i];
 	d.style["transform"] =  "rotate("+ getRandomInt(-180,180) + "deg)";
     }
+    document.getElementById("unbreak_everything").style["display"] = "";
+    document.getElementById("break_everything").style["display"] = "none";
+}
+
+function unbreakEverything() {
+    let divs = document.querySelectorAll("div");
+    for (var i = 1; i < divs.length; i++) {
+	var d = divs[i];
+	d.style["transform"] =  "";
+    }
+    document.getElementById("break_everything").style["display"] = "";
+    document.getElementById("unbreak_everything").style["display"] = "none";
 }
 
 document.getElementById("break_everything").addEventListener("click", function() { breakEverything();})
+document.getElementById("unbreak_everything").addEventListener("click", function() { unbreakEverything();})
