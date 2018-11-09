@@ -21,6 +21,11 @@ var visCanvasCtx = visCanvas.getContext("2d");
 
 var recStart;
 
+// TODO
+var baseURL = window.origin;
+
+var sendAudio = false;
+
 //var audioBlob;
 
 window.onload = function () {
@@ -39,20 +44,48 @@ window.onload = function () {
 	source = audioCtx.createMediaStreamSource(stream);
         source.connect(analyser);
 	recorder = new MediaRecorder(stream);
-	recorder.addEventListener('dataavailable', function (evt) {
+	recorder.addEventListener('dataavailable', async function (evt) {
 	    //     updateAudio(evt.data);
 	    //     sendAndReceiveBlob();
 	    
 	    //audioBlob = evt.data;
 	    //console.log("CANCELED? ", document.getElementById("rec_cancel").disabled);
 	    //console.log("STOPPED? ", document.getElementById("rec_send").disabled);
+	    
+	    
+	    // use the blob from the MediaRecorder as source for the audio tag
+	    
+	    let ou = URL.createObjectURL(evt.data);
+	    //currentBlobURL = ou;
+	    console.log("Object URL ", ou);
 
 	    var audio = document.getElementById('audio');
-	    // use the blob from the MediaRecorder as source for the audio tag
-	    audio.src = URL.createObjectURL(evt.data);
+	    audio.src = ou;
 	    audio.disabled = false;
 	    
-	    console.log("FÄÄÄÄRDIIIIG! ", evt);
+	    if (sendAudio) {
+
+
+		
+		let blob = await fetch(ou).then(r => r.blob());
+		console.log("EN BLÅBB ", blob);
+		
+		let reader = new FileReader();
+		reader.addEventListener("loadend", function() {
+		    let rez = reader.result;
+		    let payload = {
+			"session_id" :"snorkfroeken",
+			"file_name" : "apmamman",
+			"data" : btoa(rez),
+			"file_extension" : blob.type,
+			"over_write" : true, // TODO
+		    };
+		    soundToServer(payload);	
+		    
+		});
+		reader.readAsBinaryString(blob);
+			
+	    };
 	});
 	
     });
@@ -83,7 +116,7 @@ document.getElementById("rec_start").addEventListener("click", function() {
     enable(document.getElementById("rec_cancel"));
     enable(document.getElementById("rec_send"));
     recStart = new Date().getTime();
-    document.getElementById("audio").src = "";
+    //document.getElementById("audio").src = null; // Is this how you empty the src? 
     recorder.start();
 });
 
@@ -91,15 +124,21 @@ document.getElementById("rec_cancel").addEventListener("click", function() {
     enable(document.getElementById("rec_start"));
     disable(document.getElementById("rec_cancel"));
     disable(document.getElementById("rec_send"));
+    sendAudio = false;
     recorder.stop();
     recStart = null;
 });
+
+
+var currentBlobURL = null;
 
 document.getElementById("rec_send").addEventListener("click", function() {
     enable(document.getElementById("rec_start"));
     disable(document.getElementById("rec_cancel"));
     disable(document.getElementById("rec_send"));
+    sendAudio = true;
     recorder.stop();
+    
     recStart = null;
 });
 
@@ -159,12 +198,28 @@ function visualize() {
 // }
 
 
-function soundToServer(payload) {
+async function soundToServer(payload) {
 
+    console.log("Här kommer ljud ", payload);
     //if (payload.session_)
-
-    fetch().then().catch();
     
+    let url = baseURL + "/save_audio";
+    
+    (async () => {
+	
+	const rawResponse = await fetch(url, {
+	    method: "POST",
+	    headers: {
+		'Accept': 'application/json',
+		'Content-Type': 'application/json'
+	    },
+	    body: JSON.stringify(payload)
+	});
+	
+	const content = await rawResponse.text();
+	console.log(content);
+	
+    })();
 };
 
 // payload: {"session_id": "sess1", "file_name":"sentence1", "text_data": "My name is Prince, and I am funky..."}
