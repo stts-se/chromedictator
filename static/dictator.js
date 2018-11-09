@@ -67,6 +67,10 @@ window.onload = function () {
 	    if (event.results[i].isFinal) {
 	    	finalResponse.value = text.trim();
 	    	tempResponse.innerHTML = '';
+
+		//TODO: is this a good signal to send current recording and start a new one?
+		// recSendButton.click();
+		// recStartButton.click();
 		
 	    } else {
 		tempResponse.innerHTML = event.results[i][0].transcript;
