@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -73,6 +74,108 @@ func gobFile2Map(fName string) (map[string]string, error) {
 type Abbrev struct {
 	Abbrev    string `json:"abbrev"`
 	Expansion string `json:"expansion"`
+}
+
+func listSessions(w http.ResponseWriter, r *http.Request) {
+	files, err := ioutil.ReadDir(baseDir)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("couldnt' list sessions : %v", err), http.StatusInternalServerError)
+		return
+	}
+	res := []string{}
+	for _, f := range files {
+		if f.IsDir() {
+			res = append(res, f.Name())
+		}
+	}
+	sort.Slice(res, func(i, j int) bool { return res[i] < res[j] })
+
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		msg := fmt.Sprintf("listSessions: failed to marshal map of abbreviations : %v", err)
+		log.Println(msg)
+		http.Error(w, "failed to return list of sessions", http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(resJSON))
+}
+
+func listFilenames(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	session := params["session"]
+	if session == "" {
+		http.Error(w, "param 'session' is required", http.StatusInternalServerError)
+		return
+	}
+	res, err := listFiles(path.Join(baseDir, session))
+	if err != nil {
+		msg := fmt.Sprintf("listBasenames: couldn't list files : %v", err)
+		log.Println(msg)
+		http.Error(w, "failed to return list of files", http.StatusInternalServerError)
+		return
+	}
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		msg := fmt.Sprintf("listBasenames: failed to marshal map of abbreviations : %v", err)
+		log.Println(msg)
+		http.Error(w, "failed to return list of files", http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(resJSON))
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+func listFiles(dir string) ([]string, error) {
+	res := []string{}
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return res, fmt.Errorf("couldn't list files : %v", err)
+	}
+	for _, f := range files {
+		fName := f.Name()
+		res = append(res, fName)
+	}
+	sort.Slice(res, func(i, j int) bool { return res[i] < res[j] })
+	return res, nil
+}
+
+func listBasenames(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	session := params["session"]
+	if session == "" {
+		http.Error(w, "param 'session' is required", http.StatusInternalServerError)
+		return
+	}
+	fNames, err := listFiles(path.Join(baseDir, session))
+	if err != nil {
+		msg := fmt.Sprintf("listBasenames: couldn't list files : %v", err)
+		log.Println(msg)
+		http.Error(w, "failed to return list of files", http.StatusInternalServerError)
+		return
+	}
+	res := []string{}
+	for _, fName := range fNames {
+		basename := strings.TrimSuffix(fName, filepath.Ext(fName))
+		if !contains(res, basename) {
+			res = append(res, basename)
+		}
+	}
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		msg := fmt.Sprintf("listBasenames: failed to marshal map of abbreviations : %v", err)
+		log.Println(msg)
+		http.Error(w, "failed to return list of files", http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(resJSON))
 }
 
 func listAbbrevs(w http.ResponseWriter, r *http.Request) {
@@ -529,6 +632,10 @@ func main() {
 	r.HandleFunc("/abbrev/list", listAbbrevs)
 	r.HandleFunc("/abbrev/add/{abbrev}/{expansion}", addAbbrev)
 	r.HandleFunc("/abbrev/delete/{abbrev}", deleteAbbrev)
+
+	r.HandleFunc("/admin/list/sessions", listSessions)
+	r.HandleFunc("/admin/list/files/{session}", listFilenames)
+	r.HandleFunc("/admin/list/basenames/{session}", listBasenames)
 
 	r.HandleFunc("/doc/", generateDoc).Methods("GET")
 
