@@ -46,7 +46,7 @@ window.onload = function () {
     var url = new URL(document.URL);
     var session = url.searchParams.get('session')
     if (session != null && session != "") {
-	sessionField.value.trim() = session;
+	sessionField.value = session.trim();
     }
 
     
@@ -184,7 +184,9 @@ window.onload = function () {
     
     mediaAccess.catch(function(err) {
 	console.log("error from getUserMedia:", err);
-	alert("Couldn't initialize recorder: " + err);
+	let msg = "Couldn't initialize recorder: " + err;
+	alert(msg);
+	logMessage("error", msg);
     });
     
 
