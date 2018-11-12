@@ -608,6 +608,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "[chromdictator] created base dir '%s'\n", baseDir)
 	}
 
+	// load abbreviations gob
 	if _, err := os.Stat(abbrevFilePath); !os.IsNotExist(err) {
 
 		m, err := gobFile2Map(abbrevFilePath)
@@ -617,6 +618,11 @@ func main() {
 		}
 
 		abbrevs = m
+	} else {
+		// no abbrev file exists, let's initialise one
+		abbrevs["tst"] = "test"
+		abbrevs["tstn"] = "testing"
+		persistAbbrevs()
 	}
 
 	p := "7654"
