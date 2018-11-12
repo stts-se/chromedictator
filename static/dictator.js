@@ -70,8 +70,8 @@ window.onload = function () {
 	    let text = event.results[i][0].transcript.trim();
 	    if (event.results[i].isFinal) {
 
+		// if we have a cache: save current cache and start new recording
 		let oldText = finalResponse.value.trim();
-		// save current cache and start new recording
 		saveUttToList(sessionField.value.trim(), filenameBase, oldText, false); // true: is edited
 
 		if (oldText.length > 0) {
@@ -80,6 +80,7 @@ window.onload = function () {
 		    //recCancelButton.click();
 		}
 		
+		filenameBase = newFilenameBase();
 	    	finalResponse.value = text.trim();
 	    	tempResponse.innerHTML = "";
 
