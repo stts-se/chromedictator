@@ -134,6 +134,9 @@ window.onload = function () {
 	    isRecording = true;
 	} 
 	recorder.addEventListener('dataavailable', async function (evt) {	    
+	    let thisRecStart = new Date(recStart).toLocaleString();
+	    recStart = null;
+
 	    //     updateAudio(evt.data);
 	    //     sendAndReceiveBlob();
 	    
@@ -145,6 +148,8 @@ window.onload = function () {
 	    
 	    if (sendAudio) {
 
+		let recEnd = new Date().toLocaleString();
+		
 		let ou = URL.createObjectURL(evt.data);
 		//currentBlobURL = ou;
 		console.log("Object URL ", ou);
@@ -172,6 +177,8 @@ window.onload = function () {
 			"data" : btoa(rez),
 			"file_extension" : blob.type,
 			"over_write" : true, // TODO
+			"start_time": thisRecStart,
+			"end_time": recEnd,
 		    };
 		    soundToServer(payload);		    
 		});
@@ -229,7 +236,7 @@ recCancelButton.addEventListener("click", function() {
     sendAudio = false;
     recorder.stop();
     document.getElementById("rec_duration").innerHTML = "&nbsp;";
-    recStart = null;
+    //recStart = null;
 });
 
 
@@ -243,7 +250,7 @@ recSendButton.addEventListener("click", function() {
     sendAudio = true;
     recorder.stop();
     document.getElementById("rec_duration").innerHTML = "&nbsp;";
-    recStart = null;
+    //recStart = null;
 });
 
 function visualize() {
@@ -330,7 +337,8 @@ async function soundToServer(payload) {
 		logMessage("error", content);
 	    }
 	} else {
-	    logMessage("error", "couldn't save audio to server : " + statusText);
+	    console.log(rawResponse);
+	    logMessage("error", "couldn't save audio to server : " + rawResponse.statusText);
 	}
 
 	
@@ -374,7 +382,8 @@ async function textToServer(sessionName, fileName, text, isEdited) {
 		return false;
 	    }
 	} else {
-	    logMessage("error", "couldn't save text to server : " + statusText);
+	    console.log(rawResponse);
+	    logMessage("error", "couldn't save text to server : " + rawResponse.statusText);
 	}
 	
     })();

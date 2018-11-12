@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
@@ -149,7 +150,6 @@ func deleteAbbrev(w http.ResponseWriter, r *http.Request) {
 type TextObject struct {
 	SessionID string `json:"session_id"`
 	FileName  string `json:"file_name"`
-	TimeStamp string `json:"time_stamp"`
 	Data      string `json:"data"`
 	OverWrite bool   `json:"over_write"`
 }
@@ -171,10 +171,19 @@ func (ao TextObject) validate() []string {
 	return res
 }
 
+// audioJSON holds values that can be used to produce an audio file
+type audioJSON struct {
+	SessionID string `json:"session_id"`
+	//FileName  string `json:"file_name"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
 // AudioObject holds values that can be used to produce an audio file
 type AudioObject struct {
 	TextObject
-
+	StartTime     string `json:"start_time"`
+	EndTime       string `json:"end_time"`
 	FileExtension string `json:"file_extension"`
 }
 
@@ -182,6 +191,12 @@ func (ao AudioObject) validate() []string {
 	res := ao.TextObject.validate()
 	if ao.FileExtension == "" {
 		res = append(res, "missing file_extension")
+	}
+	if ao.StartTime == "" {
+		res = append(res, "missing start_time")
+	}
+	if ao.EndTime == "" {
+		res = append(res, "missing end_time")
 	}
 	return res
 }
@@ -200,6 +215,22 @@ func saveRecogniserText(w http.ResponseWriter, r *http.Request) {
 
 func saveEditedText(w http.ResponseWriter, r *http.Request) {
 	saveText(w, r, "edi")
+}
+
+func PrettyMarshal(thing interface{}) ([]byte, error) {
+	var res []byte
+
+	j, err := json.Marshal(thing)
+	if err != nil {
+		return res, err
+	}
+	var prettyJSON bytes.Buffer
+	err = json.Indent(&prettyJSON, j, "", "\t")
+	if err != nil {
+		return res, err
+	}
+	res = prettyJSON.Bytes()
+	return res, nil
 }
 
 func saveText(w http.ResponseWriter, r *http.Request, ext string) {
@@ -290,6 +321,39 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 
 }
 
+func writeJSON(jsonFilePath string, jsonObj audioJSON, overwrite bool) ([]string, error) {
+	respMessages := []string{}
+	if _, err := os.Stat(jsonFilePath); !os.IsNotExist(err) {
+		if overwrite {
+			msg := fmt.Sprintf("file with the same session ID and file name already exists: %s\nTo overwrite set over_write:true", jsonFilePath)
+
+			//http.Error(w, msg, http.StatusBadRequest)
+			//return
+			return respMessages, fmt.Errorf("%s", msg)
+		} else {
+			msg := fmt.Sprintf("overwriting existing file '%s'", jsonFilePath)
+			respMessages = append(respMessages, msg)
+		}
+	}
+	jsonJSON, err := PrettyMarshal(jsonObj)
+	if err != nil {
+		msg := fmt.Sprintf("failed to marshal response struct to JSON : %v", err)
+		// http.Error(w, msg, http.StatusInternalServerError)
+		// return
+		return respMessages, fmt.Errorf("%s", msg)
+	}
+
+	err = ioutil.WriteFile(jsonFilePath, jsonJSON, 0644)
+	if err != nil {
+		msg := fmt.Sprintf("failed to save json file '%s' : %v", jsonFilePath, err)
+		return respMessages, fmt.Errorf("%s", msg)
+		// http.Error(w, msg, http.StatusInternalServerError)
+		// return
+	}
+	fmt.Printf("Server saved %s\n", jsonFilePath)
+	return respMessages, nil
+}
+
 func saveAudio(w http.ResponseWriter, r *http.Request) {
 	var respMessages []string
 
@@ -353,12 +417,27 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 		respMessages = append(respMessages, fmt.Sprintf("created new session id dir: '%s'", path.Join(baseDir, ao.SessionID)))
 	}
 
-	audioFilePath := path.Join(baseDir, ao.SessionID, ao.FileName)
+	jsonObj := audioJSON{
+		SessionID: ao.SessionID,
+		StartTime: ao.StartTime,
+		EndTime:   ao.EndTime,
+	}
+	jsonFilePath := path.Join(baseDir, ao.SessionID, ao.FileName) + ".json"
+	jsonResps, err := writeJSON(jsonFilePath, jsonObj, ao.OverWrite)
+	if err != nil {
+		msg := fmt.Sprintf("failed to save json file '%s' : %v", jsonFilePath, err)
+		log.Println("[chromedictator] " + msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+	for _, msg := range jsonResps {
+		respMessages = append(respMessages, msg)
+	}
 
 	ext := strings.TrimPrefix(ao.FileExtension, "audio/")
-	audioFilePath = audioFilePath + "." + ext
 
-	fmt.Printf("Server saves %s\n", audioFilePath)
+	audioFilePath := path.Join(baseDir, ao.SessionID, ao.FileName)
+	audioFilePath = audioFilePath + "." + ext
 
 	if _, err := os.Stat(audioFilePath); !os.IsNotExist(err) {
 		if !ao.OverWrite {
@@ -379,6 +458,7 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
+	fmt.Printf("Server saved %s\n", audioFilePath)
 
 	respMessages = append(respMessages, fmt.Sprintf("server saved audio file '%s'", audioFilePath))
 	// TODO Copypaste
