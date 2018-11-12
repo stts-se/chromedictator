@@ -634,6 +634,16 @@ function unbreakEverything() {
     document.getElementById("unbreak_everything").style["display"] = "none";
 }
 
+function dontClick() {
+    let divs = document.querySelectorAll("div");
+    for (var i = 1; i < divs.length; i++) {
+	var d = divs[i];
+	var c = d.getAttribute("class")
+	if (c !== null && c.indexOf("nobreak") < 0)
+	    d.style["animation"] =  "spin "+ getRandomInt(4,12) + "s linear infinite";
+    }
+}
+
 const keyCodeEnter = 13;
 const keyCodeSpace = 32;
 const keyCodeEscape = 27;
@@ -706,6 +716,9 @@ function validateSessionName() {
 
 document.getElementById("break_everything").addEventListener("click", function() { breakEverything();})
 document.getElementById("unbreak_everything").addEventListener("click", function() { unbreakEverything();})
+document.getElementById("dontclick").addEventListener("click", function() { dontClick();})
+
+
 document.getElementById("current-utt").addEventListener("keyup", function() { saveOnCtrlEnter();})
 
 document.addEventListener("keyup", function() { globalShortcuts() });
