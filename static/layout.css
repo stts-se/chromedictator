@@ -66,6 +66,7 @@
     margin-top: 2em;
     width: 100%;
     padding: 0.5em;
+    min-height: 200px;
 }
 
 #saved-utts {

@@ -37,10 +37,12 @@ var baseURL = window.origin;
 
 var sendAudio = false;
 
+var abbrevMap = {};
+
 //var audioBlob;
 
 window.onload = function () {
-    
+
     disable(recCancelButton);
     disable(recSendButton);
     
@@ -57,11 +59,13 @@ window.onload = function () {
 	return;
     };
 
+    initAbbrevs();
+    
     recognition = new webkitSpeechRecognition();
     let tempResponse = document.querySelector("#recognition-result .content");
     let finalResponse = document.getElementById("current-utt");
-    // finalResponse.addEventListener('keyup', checkForAbbrev);
-    // finalResponse.addEventListener('keyup', singnalUnsavedEdit);
+    finalResponse.addEventListener('keyup', checkForAbbrev);
+    // finalResponse.addEventListener('keyup', signalUnsavedEdit);
     recognition.lang = "sv";
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -206,6 +210,186 @@ window.onload = function () {
     
     document.getElementById("current-utt").focus();
 }
+
+function initAbbrevs() {
+    loadAbbrevTable();
+   
+    
+    // $("#add_abbrev_button").on('click', function(evt) {
+    // 	let abbrev = document.getElementById("input_abbrev").value.trim();
+    // 	let expansion = document.getElementById("input_expansion").value.trim();
+	
+    // 	// TODO add button should be disablem without text in both input fields, etc
+    // 	// TODO proper validation
+    // 	if (abbrev === "") {
+    // 	    document.getElementById("msg").innerText = "Cannot add empty abbreviation";
+    // 	    return;
+    // 	};
+    // 	if (expansion === "") {
+    // 	    document.getElementById("msg").innerText = "Cannot add empty expansion";
+    // 	    return;
+    // 	};
+	
+    // 	abbrevMap[abbrev] = expansion;
+	
+    // 	addAbbrev(abbrev, expansion);	
+
+    // });
+    
+}
+
+async function loadAbbrevTable() {
+    await fetch(baseURL+ "/abbrev/list").then(async function(r) {
+	if (r.ok) {
+	    let serverAbbrevs = await r.json();
+	    //console.log("#######", serverAbbrevs);
+	    abbrevMap = {};
+	    for (var i = 0; i < serverAbbrevs.length; i++) {
+		//console.log("i: ", i, serverAbbrevs[i]);
+		let a = serverAbbrevs[i];
+		abbrevMap[a.abbrev] = a.expansion;
+	    };
+	    updateAbbrevTable();
+	} else {
+	    logMessage("error","failed to list abbreviations");
+	}
+    });
+};
+
+
+
+function updateAbbrevTable() {
+    let at = document.getElementById("abbrev_table_body");
+    at.innerHTML = '';
+    Object.keys(abbrevMap).forEach(function(k) {
+    	let v = abbrevMap[k];
+    	let tr = document.createElement('tr');
+    	let td1 = document.createElement('td');
+    	let td2 = document.createElement('td');
+    	let td3 = document.createElement('td');
+
+    	td1.innerText = k;
+    	td2.innerText = v;
+	td3.setAttribute("class","abbrev_row_delete");
+	td3.setAttribute("style","vertical-align: middle; horizontal-align: left");
+	let del = document.createElement('button');
+	del.innerHTML = "&#x274C;";
+	del.setAttribute("style","background: none; vertical-align: middle; text-align: left; border: none; font-size: 50%; width: 100%; height: 100%");
+	del.setAttribute("title", "delete abbrev '" + k + "'");
+	del.addEventListener('click', function(evt) {
+	    deleteAbbrev(k);
+	});
+	td3.appendChild(del);
+	
+    	tr.appendChild(td1);
+    	tr.appendChild(td2);
+    	tr.appendChild(td3);
+    	at.appendChild(tr);
+    });       
+
+    // 'add' section below
+    let tr = document.createElement('tr');
+    let td1 = document.createElement('td');
+    let td2 = document.createElement('td');
+    let td3 = document.createElement('td');
+    
+    td1.innerHTML = "<input id='abbrev_add_key' style='height: 20pt'/>";
+    td2.innerHTML = "<input id='abbrev_add_value' style='height: 20pt'/>";
+    td3.setAttribute("class","abbrev_row_add");
+    td3.setAttribute("style","vertical-align: middle");
+    let add = document.createElement('button');
+    add.setAttribute("title", "add");
+    add.setAttribute("class", "btn");
+    add.setAttribute("style","vertical-align: middle; padding: .2rem .75rem;");
+    add.innerHTML = "Add new";
+    //add.setAttribute("style","background: none; vertical-align: middle; text-align: center; border: none; width: 100%; height: 100%");
+    td3.appendChild(add);
+    
+    tr.appendChild(td1);
+    tr.appendChild(td2);
+    tr.appendChild(td3);
+    at.appendChild(tr);
+
+    let addThisAbbrev = function() {
+	let from = document.getElementById("abbrev_add_key").value;
+	let to = document.getElementById("abbrev_add_value").value;
+	addAbbrev(from, to);
+	loadAbbrevTable();
+    }
+    
+    document.getElementById("abbrev_add_key").addEventListener('keyup', function(evt) {
+	if (evt.keyCode === keyCodeEnter)
+	    addThisAbbrev();
+    });
+    document.getElementById("abbrev_add_value").addEventListener('keyup', function(evt) {
+	if (evt.keyCode === keyCodeEnter)
+	    addThisAbbrev();
+    });
+    add.addEventListener('click', function(evt) {
+	addThisAbbrev();
+    });
+}
+
+async function addAbbrev(abbrev, expansion) {
+    await fetch(baseURL+ "/abbrev/add/"+ abbrev + "/" + expansion).then(async function(r) {
+	if (r.ok) {
+	    logMessage("info", "added abbrev " + abbrev + " => " + expansion);
+	} else {
+	    logMessage("error","couldn't add abbrev " + abbrev + " => " + expansion);
+	}
+    });
+};
+
+async function deleteAbbrev(abbrev) {
+    await fetch(baseURL + "/abbrev/delete/" + abbrev).then(async function(r) {
+	if (r.ok) {
+	    logMessage("info", "deleted abbrev " + abbrev);
+	    loadAbbrevTable();
+	} else {
+	    logMessage("error","couldn't delete abbrev " + abbrev);
+	}
+    });
+};
+
+
+var leftWordRE = /(?:^| +)([^ ]+)$/; // TODO Really no need for regexp,
+				    // just pick off characters until
+				    // space, etc, or end of string?
+
+function checkForAbbrev(evt) {
+    if ( evt.key === " ") {
+	// Ugh... going in circles...
+	let ta = document.getElementById("current-utt");
+	let startPos = ta.selectionStart;
+	let end = ta.selectionEnd;
+	
+	let text = ta.value;
+	// -1 is to remove the trailing space
+	let stringUp2Cursor = text.substring(0,startPos-1);
+	
+	// wordBeforeSpace will have a trailing space
+	let regexRes = leftWordRE.exec(stringUp2Cursor);
+	if (regexRes === null) {
+	    return;
+	};
+	let wordBeforeSpace = regexRes[0]; 
+	
+	if (abbrevMap.hasOwnProperty(wordBeforeSpace.trim())) {
+	    //console.log(wordBeforeSpace, abbrevMap[wordBeforeSpace]);
+	    // Match found. Replace abbreviation with its expansion
+	    let textBefore = text.substring(0,startPos - wordBeforeSpace.length);
+	    let textAfter = text.substring(startPos);
+	    let expansion = abbrevMap[wordBeforeSpace.trim()];
+	    
+	    
+	    ta.value = textBefore.trim() + " " + expansion + " " + textAfter.trim();
+	    // Move cursor to directly after expanded word + 1 (space)
+	    ta.selectionEnd =  (textBefore.trim() + " " + expansion).length + 1;
+	};	
+	
+    }
+}
+
 
 function disable(element) {
     element.setAttribute("disabled","true");

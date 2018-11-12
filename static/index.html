@@ -80,10 +80,34 @@
 	    <div class="footer">
 
 		<div class="abbrevs panel">
-		    <div class="title">Abbrevs</div>
-		    <div class="content"></div>
+		    <div class="content resizable selected-font" style="max-height:200px; overflow:auto;">
+			<details><summary class="title" style="margin-bottom: 15px">Abbrevs</summary>
+			    <span id="abbrev_table">
+			<table>
+			    <thead>
+				<tr>
+				    <th>Abbrev</th><th>Expansion</th><th></th>
+				</tr>				
+			    </thead>
+			    
+			    <tbody class="selected-font" id="abbrev_table_body">
+			    </tbody>			    
+			</table></span>
+		    </div>
+			</details>
 		</div>
-
+		
+		<div class="shortcuts panel">
+		    <div class="content resizable selected-font" style="max-height:200px; overflow:auto;">
+			<details open><summary class="title">Shortcuts</summary>
+			    <div id="shortcuts" class="content"></div>
+			</details>
+			
+			<!-- 			    <div class="title">Shortcuts</div>-->
+			<!-- 		    <div id="shortcuts" class="content"></div> -->
+		    </div>
+		</div>
+		
 		<div class="menu panel">
 		    <div class="title">Menu</div>
 		    <div class="content">
@@ -92,11 +116,6 @@
 		    </div>
 		</div>
 
-		<div class="shortcuts panel">
-		    <div class="title">Shortcuts</div>
-		    <div id="shortcuts" class="content"></div>
-		</div>
-		
 	    </div>
 	    
 	    <div class="leftmargin nobreak">
