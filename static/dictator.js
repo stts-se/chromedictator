@@ -65,19 +65,26 @@ window.onload = function () {
     recognition.continuous = true;
     recognition.interimResults = true;
     
-    recognition.onresult = function(event) {
+    recognition.onresult = async function(event) {
 	for (var i = event.resultIndex; i < event.results.length; ++i) {
 	    let text = event.results[i][0].transcript.trim();
 	    if (event.results[i].isFinal) {
+
+		let oldText = finalResponse.value.trim();
+		// save current cache and start new recording
+		saveUttToList(sessionField.value.trim(), filenameBase, oldText, false); // true: is edited
+
+		if (oldText.length > 0) {
+		    // TODO: send audio cache to server and restart recording
+		    //recSendButton.click();
+		    //recCancelButton.click();
+		}
+		
 	    	finalResponse.value = text.trim();
 	    	tempResponse.innerHTML = "";
 
 		textToServer(sessionField.value.trim(), filenameBase, text.trim(), false); // false: text from recorgnosiser (not edited)
-		
-		//TODO: is this a good signal to send current recording and start a new one?
-		// recSendButton.click();
-		// recStartButton.click();
-		
+				
 	    } else {
 		tempResponse.innerHTML = event.results[i][0].transcript;
 	    }
@@ -85,7 +92,6 @@ window.onload = function () {
     };    
     
     recognition.onend = function() {
-	// TODO?
 	//console.log("recognition.onend");
 	enable(recStartButton);
 	disable(recSendButton);
@@ -136,6 +142,7 @@ window.onload = function () {
 	recorder.addEventListener('dataavailable', async function (evt) {	    
 	    let thisRecStart = new Date(recStart).toLocaleString();
 	    recStart = null;
+	    document.getElementById("rec_duration").innerHTML = "&nbsp;"; // TODO: called twice, async issue
 
 	    //     updateAudio(evt.data);
 	    //     sendAndReceiveBlob();
@@ -433,26 +440,23 @@ function saveOnCtrlEnter() {
     if (event.ctrlKey && event.keyCode === keyCodeEnter) {
 	var src = event.srcElement
 	var text = src.value.trim();
-	if (text.length > 0 && filenameBase !== undefined && filenameBase !== null) {
-	    if (textToServer(sessionField.value.trim(), filenameBase, text, true)) { // true: isEdited
+	saveUttToList(sessionField.value.trim(), filenameBase, text, true); // true: is edited
+	src.value = "";
+    }
+}
+
+function saveUttToList(session, fName, text, isEdited) {
+    console.log(session, fName, text);
+	if (text.length > 0 && fName !== undefined && fName !== null) {
+	    if (textToServer(session, fName, text, isEdited)) { 
 		var saved = document.getElementById("saved-utts");
 		var div = document.createElement("div")
 		saved.appendChild(div);
 		div.textContent = text;
-		// let edit = document.createElement("button");
-		// edit.setAttribute("class","btn");
-		// edit.setAttribute("style","border-width: 0; padding: 0; margin: 0; margin-left: 4pt; color: inherit");
-		// edit.innerHTML = "&#x2710;";
-		// edit.addEventListener("click", function() {
-		//     console.log("jojo");
-		// });
-		// div.appendChild(edit);
 		div.id = filenameBase;
-		src.value = "";
 		logMessage("info", "added and saved text '" + text + "'");
 	    }
 	}
-    }
 }
 
 function globalShortcuts() {

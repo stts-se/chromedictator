@@ -68,6 +68,10 @@
     padding: 0.5em;
 }
 
+#saved-utts {
+    min-height: 200px;
+}
+
 #sessionname {
     width: 100%;
 }
