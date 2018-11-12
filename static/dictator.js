@@ -44,7 +44,7 @@ window.onload = function () {
     var url = new URL(document.URL);
     var session = url.searchParams.get('session')
     if (session != null && session != "") {
-	sessionName.value = session;
+	sessionName.value.trim() = session;
     }
 
     
@@ -365,7 +365,6 @@ const keyCodeEscape = 27;
 function saveOnCtrlEnter() {
     if (event.ctrlKey && event.keyCode === keyCodeEnter) {
 	var src = event.srcElement
-	console.log(src);
 	var text = src.value.trim();
 	if (text.length > 0) {
 	    var saved = document.getElementById("saved-utts");
@@ -404,10 +403,12 @@ function populateShortcuts() {
 function validateSessionName() {
     if (sessionName.value.trim().length > 0) {
 	enable(recStartButton);
+	sessionName.style['border-color'] = "";
    }
     else {
 	logMessage("info","session name is empty");
 	disable(recStartButton);
+	sessionName.style['border-color'] = "red";
     }
 }
 
