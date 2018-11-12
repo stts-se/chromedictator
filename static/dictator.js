@@ -25,9 +25,11 @@ var recStart;
 const recStartButton = document.getElementById("rec_start");
 const recSendButton = document.getElementById("rec_send");
 const recCancelButton = document.getElementById("rec_cancel");
-const sessionName = document.getElementById("sessionname");
+const sessionField = document.getElementById("sessionname");
 
 var isRecording = false;
+
+var filenameBase;
 
 // TODO
 var baseURL = window.origin;
@@ -44,7 +46,7 @@ window.onload = function () {
     var url = new URL(document.URL);
     var session = url.searchParams.get('session')
     if (session != null && session != "") {
-	sessionName.value.trim() = session;
+	sessionField.value.trim() = session;
     }
 
     
@@ -68,8 +70,10 @@ window.onload = function () {
 	    let text = event.results[i][0].transcript.trim();
 	    if (event.results[i].isFinal) {
 	    	finalResponse.value = text.trim();
-	    	tempResponse.innerHTML = '';
+	    	tempResponse.innerHTML = "";
 
+		textToServer(sessionField.value.trim(), filenameBase, text.trim(), false); // false: text from recorgnosiser (not edited)
+		
 		//TODO: is this a good signal to send current recording and start a new one?
 		// recSendButton.click();
 		// recStartButton.click();
@@ -82,7 +86,7 @@ window.onload = function () {
     
     recognition.onend = function() {
 	// TODO?
-	console.log("recognition.onend");
+	//console.log("recognition.onend");
 	enable(recStartButton);
 	disable(recSendButton);
 	disable(recCancelButton);
@@ -90,7 +94,7 @@ window.onload = function () {
     
     recognition.onerror = function(event) {
 	if (event.error === 'no-speech') {
-	    logMessage("error", "No speech input");	    
+	    logMessage("error", "No speech input");
 	} else if (event.error === 'audio-capture') {
 	    logMessage("error", "Microphone failure");	    	    
 	} else if (event.error === 'not-allowed') {
@@ -102,10 +106,14 @@ window.onload = function () {
 	} else if (event.error === 'network') {
 	    logMessage("error", "Network error");	    	    
 	} else if (event.error === 'aborted') {
-	    logMessage("info", "Recording aborted");	    	    
+	    logMessage("info", "Recording cancelled");	    
 	} else {
 	    logMessage("info", "Recording got error '" + event.error + "'");
 	}
+	audio.src = "";
+	// enable(recStartButton);
+	// disable(recSendButton);
+	// disable(recCancelButton);
     };
 
     
@@ -131,24 +139,24 @@ window.onload = function () {
 	    
 	    //audioBlob = evt.data;
 	    //console.log("CANCELED? ", recCancelButton.disabled);
-	    //console.log("STOPPED? ", recSendButton.disabled);
-	    
+	    //console.log("STOPPED? ", recSendButton.disabled);    
 	    
 	    // use the blob from the MediaRecorder as source for the audio tag
 	    
-	    let ou = URL.createObjectURL(evt.data);
-	    //currentBlobURL = ou;
-	    console.log("Object URL ", ou);
-
-	    var audio = document.getElementById('audio');
-	    audio.src = ou;
-	    audio.disabled = false;
-	    
 	    if (sendAudio) {
-		let blob = await fetch(ou).then(r => r.blob());
-		console.log("EN BLÅBB ", blob);
 
-		let sess = sessionName.value.trim();
+		let ou = URL.createObjectURL(evt.data);
+		//currentBlobURL = ou;
+		console.log("Object URL ", ou);
+		
+		var audio = document.getElementById('audio');
+		audio.src = ou;
+		audio.disabled = false;
+	    
+		let blob = await fetch(ou).then(r => r.blob());
+		//console.log("EN BLÅBB ", blob);
+
+		let sess = sessionField.value.trim();
 		if (sess.length === 0) {
 		    logMessage("error","cannot send audio with empty session id");
 		    return;
@@ -160,13 +168,12 @@ window.onload = function () {
 		    let rez = reader.result;
 		    let payload = {
 			"session_id" : sess,
-			"file_name" : "apmamman",
+			"file_name" : filenameBase,
 			"data" : btoa(rez),
 			"file_extension" : blob.type,
 			"over_write" : true, // TODO
 		    };
-		    soundToServer(payload);	
-		    
+		    soundToServer(payload);		    
 		});
 		reader.readAsBinaryString(blob);
 			
@@ -199,23 +206,27 @@ function enable(element) {
 }
 
 recStartButton.addEventListener("click", function() {
+    filenameBase = newFilenameBase();
+    console.log("filenameBase set to " + filenameBase);
     recognition.start();
     disable(recStartButton);
     enable(recCancelButton);
     enable(recSendButton);
     recStart = new Date().getTime();
-    //document.getElementById("audio").src = null; // Is this how you empty the src? 
     recorder.start();
     logMessage("info", "Recording started");
 });
 
 recCancelButton.addEventListener("click", function() {
+    filenameBase = null;
+    console.log("filenameBase set to " + filenameBase);
     recognition.abort();
     enable(recStartButton);
     disable(recCancelButton);
     disable(recSendButton);
     sendAudio = false;
     recorder.stop();
+    document.getElementById("rec_duration").innerHTML = "&nbsp;";
     recStart = null;
 });
 
@@ -229,7 +240,7 @@ recSendButton.addEventListener("click", function() {
     disable(recSendButton);
     sendAudio = true;
     recorder.stop();
-    
+    document.getElementById("rec_duration").innerHTML = "&nbsp;";
     recStart = null;
 });
 
@@ -307,13 +318,61 @@ async function soundToServer(payload) {
 	    body: JSON.stringify(payload)
 	});
 	
-	const content = await rawResponse.text();
-	console.log(content);
-	try {
-	    const json = JSON.parse(content);
-	    logMessage("info", json.message);
-	} catch {
-	    logMessage("error", content);
+	if (rawResponse.ok) {
+	    const content = await rawResponse.text();
+	    console.log(content);
+	    try {
+		const json = JSON.parse(content);
+		logMessage("info", json.message);
+	    } catch {
+		logMessage("error", content);
+	    }
+	} else {
+	    logMessage("error", "couldn't save audio to server : " + statusText);
+	}
+
+	
+    })();
+};
+
+// payload: {"session_id": "sess1", "file_name":"sentence1", "data": "My name is Prince, and I am funky..."}
+async function textToServer(sessionName, fileName, text, isEdited) {
+
+    let payload = {
+	"session_id" : sessionName,
+	"file_name" : fileName,
+	"data" : text,
+	"over_write" : true, // TODO
+    };
+
+    let url = baseURL + "/save_recogniser_text";
+    if (isEdited)
+	url = baseURL + "/save_edited_text";
+    
+    (async () => {
+	
+	const rawResponse = await fetch(url, {
+	    method: "POST",
+	    headers: {
+		'Accept': 'application/json',
+		'Content-Type': 'application/json'
+	    },
+	    body: JSON.stringify(payload)
+	});
+	
+	if (rawResponse.ok) {
+	    const content = await rawResponse.text();
+	    console.log(content);
+	    try {
+		const json = JSON.parse(content);
+		logMessage("info", json.message);
+		return true;
+	    } catch {
+		logMessage("error", content);
+		return false;
+	    }
+	} else {
+	    logMessage("error", "couldn't save text to server : " + statusText);
 	}
 	
     })();
@@ -323,9 +382,6 @@ function logMessage(title, text) {
     console.log(title, text);
     document.getElementById("messages").textContent = title + ": " + text;    
 }
-
-// payload: {"session_id": "sess1", "file_name":"sentence1", "text_data": "My name is Prince, and I am funky..."}
-function textToServer(payload) {};
 
 
 window.onbeforeunload = function() {
@@ -366,13 +422,24 @@ function saveOnCtrlEnter() {
     if (event.ctrlKey && event.keyCode === keyCodeEnter) {
 	var src = event.srcElement
 	var text = src.value.trim();
-	if (text.length > 0) {
-	    var saved = document.getElementById("saved-utts");
-	    var div = document.createElement("div")
-	    saved.appendChild(div);
-	    div.textContent = text;
-	    src.value = "";
-	    logMessage("info", "added text '" + text + "'");
+	if (text.length > 0 && filenameBase !== undefined && filenameBase !== null) {
+	    if (textToServer(sessionField.value.trim(), filenameBase, text, true)) { // true: isEdited
+		var saved = document.getElementById("saved-utts");
+		var div = document.createElement("div")
+		saved.appendChild(div);
+		div.textContent = text;
+		// let edit = document.createElement("button");
+		// edit.setAttribute("class","btn");
+		// edit.setAttribute("style","border-width: 0; padding: 0; margin: 0; margin-left: 4pt; color: inherit");
+		// edit.innerHTML = "&#x2710;";
+		// edit.addEventListener("click", function() {
+		//     console.log("jojo");
+		// });
+		// div.appendChild(edit);
+		div.id = filenameBase;
+		src.value = "";
+		logMessage("info", "added and saved text '" + text + "'");
+	    }
 	}
     }
 }
@@ -392,6 +459,17 @@ function globalShortcuts() {
 }
 
 
+function newFilenameBase() {
+    return uuidv4();
+}
+
+// Snippet lifted from https://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript#2117523:
+function uuidv4() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+  )
+}
+
 function populateShortcuts() {
     document.getElementById("shortcuts").innerHTML = "<table>" +
 	"<tr><td style='text-align: right'>Ctrl-Space :</td><td>Start/Send recording</td></tr>" +
@@ -401,14 +479,14 @@ function populateShortcuts() {
 }
 
 function validateSessionName() {
-    if (sessionName.value.trim().length > 0) {
+    if (sessionField.value.trim().length > 0) {
 	enable(recStartButton);
-	sessionName.style['border-color'] = "";
+	sessionField.style['border-color'] = "";
    }
     else {
 	logMessage("info","session name is empty");
 	disable(recStartButton);
-	sessionName.style['border-color'] = "red";
+	sessionField.style['border-color'] = "red";
     }
 }
 
@@ -418,5 +496,5 @@ document.getElementById("current-utt").addEventListener("keyup", function() { sa
 
 document.addEventListener("keyup", function() { globalShortcuts() });
 
-sessionName.addEventListener("keyup", function() { validateSessionName() });
-sessionName.addEventListener("change", function() { validateSessionName() });
+sessionField.addEventListener("keyup", function() { validateSessionName() });
+sessionField.addEventListener("change", function() { validateSessionName() });
