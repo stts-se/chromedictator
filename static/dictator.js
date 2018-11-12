@@ -180,6 +180,8 @@ window.onload = function () {
 	alert("Couldn't initialize recorder: " + err);
     });
     
+
+    populateShortcuts();
     
     document.getElementById("refresh_time").innerText = new Date().toLocaleString();
 
@@ -391,11 +393,20 @@ function globalShortcuts() {
 }
 
 
+function populateShortcuts() {
+    document.getElementById("shortcuts").innerHTML = "<table>" +
+	"<tr><td style='text-align: right'>Ctrl-Space :</td><td>Start/Send recording</td></tr>" +
+	"<tr><td style='text-align: right'>Ctrl-Enter :</td><td>Save text</td></tr>" +
+	"<tr><td style='text-align: right'>Escape :</td><td>Cancel recording</td></tr>" + 
+	"</table>";
+}
+
 function validateSessionName() {
     if (sessionName.value.trim().length > 0) {
 	enable(recStartButton);
    }
     else {
+	logMessage("info","session name is empty");
 	disable(recStartButton);
     }
 }
