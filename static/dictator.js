@@ -27,6 +27,8 @@ const recSendButton = document.getElementById("rec_send");
 const recCancelButton = document.getElementById("rec_cancel");
 const sessionName = document.getElementById("sessionname");
 
+var isRecording = false;
+
 // TODO
 var baseURL = window.origin;
 
@@ -117,7 +119,12 @@ window.onload = function () {
 	source = audioCtx.createMediaStreamSource(stream);
         source.connect(visAnalyser);
 	recorder = new MediaRecorder(stream);
-	recorder.onstop = function(evt) {} // ?? 
+	recorder.onstop = function(evt) {
+	    isRecording = false;
+	} 
+	recorder.onstart = function(evt) {
+	    isRecording = true;
+	} 
 	recorder.addEventListener('dataavailable', async function (evt) {	    
 	    //     updateAudio(evt.data);
 	    //     sendAndReceiveBlob();
@@ -254,7 +261,7 @@ function visualize() {
 	var barHeight;
 	var x = 0;
 	
-	if (visualiseAudio()) { 
+	if (isRecording) { 
 	    for(var i = 0; i < bufferLengthAlt; i++) {
 		barHeight = dataArrayAlt[i];
 		
@@ -383,10 +390,6 @@ function globalShortcuts() {
     
 }
 
-
-function visualiseAudio() {
-    return recStartButton.disabled && !recCancelButton.disabled;
-}
 
 function validateSessionName() {
     if (sessionName.value.trim().length > 0) {
