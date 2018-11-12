@@ -20,7 +20,7 @@ visAnalyser.smoothingTimeConstant = 0.85;
 var visCanvas = document.querySelector('.visualiser');
 var visCanvasCtx = visCanvas.getContext("2d");
 
-var recStart;
+var recStartTime;
 
 const recStartButton = document.getElementById("rec_start");
 const recSendButton = document.getElementById("rec_send");
@@ -29,6 +29,7 @@ const sessionField = document.getElementById("sessionname");
 
 var isRecording = false;
 
+var prevFilenameBase;
 var filenameBase;
 
 // TODO
@@ -71,20 +72,16 @@ window.onload = function () {
 	    if (event.results[i].isFinal) {
 
 		// if we have a cache: save current cache and start new recording
-		let oldText = finalResponse.value.trim();
-		saveUttToList(sessionField.value.trim(), filenameBase, oldText, false); // true: is edited
-
-		if (oldText.length > 0) {
-		    // TODO: send audio cache to server and restart recording
-		    //recSendButton.click();
-		    //recCancelButton.click();
+		if (isRecording) {
+		    await stopAndSend();
+		    await recStart();
 		}
 		
-		filenameBase = newFilenameBase();
 	    	finalResponse.value = text.trim();
 	    	tempResponse.innerHTML = "";
 
-		textToServer(sessionField.value.trim(), filenameBase, text.trim(), false); // false: text from recorgnosiser (not edited)
+		await textToServer(sessionField.value.trim(), filenameBase, text.trim(), false); // false: text from recogniser (not edited)
+		
 				
 	    } else {
 		tempResponse.innerHTML = event.results[i][0].transcript;
@@ -141,20 +138,23 @@ window.onload = function () {
 	    isRecording = true;
 	} 
 	recorder.addEventListener('dataavailable', async function (evt) {	    
-	    let thisRecStart = new Date(recStart).toLocaleString();
-	    recStart = null;
+	    let thisRecStart = new Date(recStartTime).toLocaleString();
+	    recStartTime = null;
 	    document.getElementById("rec_duration").innerHTML = "&nbsp;"; // TODO: called twice, async issue
 
-	    //     updateAudio(evt.data);
-	    //     sendAndReceiveBlob();
-	    
-	    //audioBlob = evt.data;
-	    //console.log("CANCELED? ", recCancelButton.disabled);
-	    //console.log("STOPPED? ", recSendButton.disabled);    
-	    
-	    // use the blob from the MediaRecorder as source for the audio tag
-	    
+	    let sess = sessionField.value.trim();
+	    if (sess.length === 0) {
+		logMessage("error","cannot send audio with empty session id");
+		return;
+	    }
+
 	    if (sendAudio) {
+
+		// save working text if unsaved
+		let oldText = document.getElementById("current-utt").value.trim();
+		if (oldText.length > 0) {
+		    await saveUttToList(sessionField.value.trim(), prevFilenameBase, oldText, true); // true : text is edited
+		}	    
 
 		let recEnd = new Date().toLocaleString();
 		
@@ -169,13 +169,6 @@ window.onload = function () {
 		let blob = await fetch(ou).then(r => r.blob());
 		//console.log("EN BLÅBB ", blob);
 
-		let sess = sessionField.value.trim();
-		if (sess.length === 0) {
-		    logMessage("error","cannot send audio with empty session id");
-		    return;
-		}
-
-		
 		let reader = new FileReader();
 		reader.addEventListener("loadend", function() {
 		    let rez = reader.result;
@@ -184,7 +177,7 @@ window.onload = function () {
 			"file_name" : filenameBase,
 			"data" : btoa(rez),
 			"file_extension" : blob.type,
-			"over_write" : true, // TODO
+			"over_write" : false,
 			"start_time": thisRecStart,
 			"end_time": recEnd,
 		    };
@@ -222,19 +215,26 @@ function enable(element) {
     element.removeAttribute("disabled","false");
 }
 
-recStartButton.addEventListener("click", function() {
+
+async function recStart() {
+    prevFilenameBase = filenameBase;
     filenameBase = newFilenameBase();
     console.log("filenameBase set to " + filenameBase);
-    recognition.start();
-    disable(recStartButton);
-    enable(recCancelButton);
-    enable(recSendButton);
-    recStart = new Date().getTime();
-    recorder.start();
+    await disable(recStartButton);
+    await enable(recCancelButton);
+    await enable(recSendButton);
+    recStartTime = new Date().getTime();
+    await recorder.start();
     logMessage("info", "Recording started");
+}
+
+recStartButton.addEventListener("click", async function() {
+    await recStart();
+    recognition.start();
 });
 
 recCancelButton.addEventListener("click", function() {
+    prevFilenameBase = filenameBase;
     filenameBase = null;
     console.log("filenameBase set to " + filenameBase);
     recognition.abort();
@@ -244,21 +244,24 @@ recCancelButton.addEventListener("click", function() {
     sendAudio = false;
     recorder.stop();
     document.getElementById("rec_duration").innerHTML = "&nbsp;";
-    //recStart = null;
+    //recStartTime = null;
 });
 
 
 var currentBlobURL = null;
 
-recSendButton.addEventListener("click", function() {
-    recognition.stop();
-    enable(recStartButton);
-    disable(recCancelButton);
-    disable(recSendButton);
+async function stopAndSend() {
+    await enable(recStartButton);
+    await disable(recCancelButton);
+    await disable(recSendButton);
     sendAudio = true;
-    recorder.stop();
+    await recorder.stop();
     document.getElementById("rec_duration").innerHTML = "&nbsp;";
-    //recStart = null;
+}
+
+recSendButton.addEventListener("click", async function() {    
+    await stopAndSend();
+    recognition.stop();
 });
 
 function visualize() {
@@ -273,8 +276,8 @@ function visualize() {
     visCanvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
     
     var draw = function() {
-	if (recStart != null) {
-	    var recDur = new Date().getTime() - recStart;
+	if (recStartTime != null) {
+	    var recDur = new Date().getTime() - recStartTime;
 	    //if (recDur % 1000 === 0) {
 	    document.getElementById("rec_duration").textContent = Math.floor(recDur/1000) + "s";
 	    //}
@@ -353,21 +356,23 @@ async function soundToServer(payload) {
     })();
 };
 
-// payload: {"session_id": "sess1", "file_name":"sentence1", "data": "My name is Prince, and I am funky..."}
 async function textToServer(sessionName, fileName, text, isEdited) {
 
+    console.log("textToServer", sessionName, fileName, text, isEdited);
+    
     let payload = {
 	"session_id" : sessionName,
 	"file_name" : fileName,
 	"data" : text,
-	"over_write" : true, // TODO
+	"over_write" : false,
     };
+    let res = true;
 
     let url = baseURL + "/save_recogniser_text";
     if (isEdited)
 	url = baseURL + "/save_edited_text";
     
-    (async () => {
+    let f = (async () => {
 	
 	const rawResponse = await fetch(url, {
 	    method: "POST",
@@ -387,14 +392,21 @@ async function textToServer(sessionName, fileName, text, isEdited) {
 		return true;
 	    } catch {
 		logMessage("error", content);
+		res = false;
 		return false;
 	    }
 	} else {
 	    console.log(rawResponse);
 	    logMessage("error", "couldn't save text to server : " + rawResponse.statusText);
+	    res = false;
+	    return false;
 	}
 	
-    })();
+    });
+    await f();
+
+    logMessage("info", "saved text '" + text + "'");
+    return res;
 };
 
 function logMessage(title, text) {
@@ -446,16 +458,14 @@ function saveOnCtrlEnter() {
     }
 }
 
-function saveUttToList(session, fName, text, isEdited) {
-    console.log(session, fName, text);
+async function saveUttToList(session, fName, text, isEdited) {
 	if (text.length > 0 && fName !== undefined && fName !== null) {
-	    if (textToServer(session, fName, text, isEdited)) { 
+	    if (await textToServer(session, fName, text, isEdited)) {
 		var saved = document.getElementById("saved-utts");
 		var div = document.createElement("div")
 		saved.appendChild(div);
 		div.textContent = text;
 		div.id = filenameBase;
-		logMessage("info", "added and saved text '" + text + "'");
 	    }
 	}
 }
