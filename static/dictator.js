@@ -12,12 +12,12 @@ var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 var recorder;
 var recognition;
 
-var analyser = audioCtx.createAnalyser();
-analyser.minDecibels = -90;
-analyser.maxDecibels = -10;
-analyser.smoothingTimeConstant = 0.85;
+var visAnalyser = audioCtx.createAnalyser();
+visAnalyser.minDecibels = -90;
+visAnalyser.maxDecibels = -10;
+visAnalyser.smoothingTimeConstant = 0.85;
 
-var visCanvas = document.querySelector('.visualizer');
+var visCanvas = document.querySelector('.visualiser');
 var visCanvasCtx = visCanvas.getContext("2d");
 
 var recStart;
@@ -115,9 +115,10 @@ window.onload = function () {
     mediaAccess.then(function(stream) {
 	visualize();
 	source = audioCtx.createMediaStreamSource(stream);
-        source.connect(analyser);
+        source.connect(visAnalyser);
 	recorder = new MediaRecorder(stream);
-	recorder.addEventListener('dataavailable', async function (evt) {
+	recorder.onstop = function(evt) {} // ?? 
+	recorder.addEventListener('dataavailable', async function (evt) {	    
 	    //     updateAudio(evt.data);
 	    //     sendAndReceiveBlob();
 	    
@@ -188,10 +189,6 @@ function enable(element) {
     element.removeAttribute("disabled","false");
 }
 
-function doRecord() {
-    return recStartButton.disabled;
-}
-
 recStartButton.addEventListener("click", function() {
     recognition.start();
     disable(recStartButton);
@@ -232,8 +229,8 @@ function visualize() {
     var WIDTH = visCanvas.width;
     var HEIGHT = visCanvas.height;
         
-    analyser.fftSize = 256;
-    var bufferLengthAlt = analyser.frequencyBinCount;
+    visAnalyser.fftSize = 256;
+    var bufferLengthAlt = visAnalyser.frequencyBinCount;
     var dataArrayAlt = new Uint8Array(bufferLengthAlt);
     
     visCanvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
@@ -248,7 +245,7 @@ function visualize() {
     
 	var drawVisual = requestAnimationFrame(draw);
 	
-	analyser.getByteFrequencyData(dataArrayAlt);
+	visAnalyser.getByteFrequencyData(dataArrayAlt);
 	
 	visCanvasCtx.fillStyle = 'rgb(0, 0, 0)';
 	visCanvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -257,7 +254,7 @@ function visualize() {
 	var barHeight;
 	var x = 0;
 	
-	if (doRecord()) { 
+	if (visualiseAudio()) { 
 	    for(var i = 0; i < bufferLengthAlt; i++) {
 		barHeight = dataArrayAlt[i];
 		
@@ -387,11 +384,17 @@ function globalShortcuts() {
 }
 
 
+function visualiseAudio() {
+    return recStartButton.disabled && !recCancelButton.disabled;
+}
+
 function validateSessionName() {
-    if (sessionName.value.trim().length > 0)
+    if (sessionName.value.trim().length > 0) {
 	enable(recStartButton);
-    else
+   }
+    else {
 	disable(recStartButton);
+    }
 }
 
 document.getElementById("break_everything").addEventListener("click", function() { breakEverything();})
