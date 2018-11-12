@@ -241,7 +241,7 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 
 	vali := to.validate()
 	if len(vali) > 0 {
-		msg := fmt.Sprintf("incomin JSON not valid: %s", strings.Join(vali, " : "))
+		msg := fmt.Sprintf("incoming JSON not valid: %s", strings.Join(vali, " : "))
 		log.Println(msg)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
