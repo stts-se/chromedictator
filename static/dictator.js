@@ -94,10 +94,14 @@ window.onload = function () {
     };    
     
     recognition.onend = function() {
-	//console.log("recognition.onend");
+	console.log("recognition.onend");
 	enable(recStartButton);
 	disable(recSendButton);
 	disable(recCancelButton);
+    };
+    
+    recognition.onspeechend = function() {
+	console.log("recognition.onspeechend");
     };
     
     recognition.onerror = function(event) {
