@@ -57,7 +57,7 @@ The `make` command will generate a zip file containing everything needed to run 
 
 ### .webm
 
-Sound file in Google Chrome's format. Can be converted into .wav using e.g. `ffmpeg`.
+Audio (media) file used by Google Chrome. Can be converted into .wav or other formats using e.g. `ffmpeg`.
 
 ### .json
 
