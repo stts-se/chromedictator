@@ -3,7 +3,7 @@
 https://github.com/stts-se/chromedictator
 
 
-## 1. Build and run from source
+## Build and run from source
 
  If you do not already have Go installed, download and install the most recent stable version from https://golang.org/dl/, then:
 
@@ -31,7 +31,7 @@ The server will create a `audio_files` sub-directory in the corrent direktory if
 
 The server will create a `abbrevs.gob` file, containing mappings from abbreviations to expanded forms, if it does not already exist.
 
-## 2. Build and package pre-compiled version
+## Build and package pre-compiled version
 
 The `make` command will generate a zip file containing everything needed to run the server, including default executables for the following operating systems:
 
@@ -40,7 +40,7 @@ The `make` command will generate a zip file containing everything needed to run 
 * chromedict_mac (darwin, untested)
 
 
-## 3. Run pre-compiled version
+## Run pre-compiled version
 
 1. Unzip the zip file
 2. Start the server using the pre-compiled executable for your OS.
