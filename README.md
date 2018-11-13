@@ -27,6 +27,10 @@ Go to the following URL in Google Chrome:
      http://localhost:7654
 
 
+The server will create a `audio_files` sub-directory in the corrent direktory if it does not already exist.
+
+The server will create a `abbrevs.gob` file, containing mappings from abbreviations to expanded forms, if it does not already exist.
+
 ## 2. Build and package pre-compiled version
 
 The `make` command will generate a zip file containing everything needed to run the server, including default executables for the following operating systems:
