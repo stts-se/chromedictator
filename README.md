@@ -1,7 +1,7 @@
 # chromedictator
 
 
- Install the most recent stable version of Go from https://golang.org/dl/
+ If you do not already have Go installed, install the most recent stable version of Go from https://golang.org/dl/, then:
 
 
     git clone https://github.com/stts-se/chromedictator
