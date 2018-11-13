@@ -204,6 +204,7 @@ function initWebkitSpeechRecognition() {
 
 		// stop recorder if it's running
 		if (isRecording) {
+		    sendAudio = true;
 		    recorder.stop();
 		    recorder.start();
 		}
