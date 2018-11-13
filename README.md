@@ -13,6 +13,7 @@ To start the server:
      go run chromedictator.go
 
 or
+
      go build
      ./chromedictator
 
