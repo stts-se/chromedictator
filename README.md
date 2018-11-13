@@ -1,5 +1,8 @@
 # chromedictator
 
+https://github.com/stts-se/chromedictator
+
+
 ## 1. Build and run from source
 
  If you do not already have Go installed, download and install the most recent stable version from https://golang.org/dl/, then:
@@ -33,14 +36,13 @@ The `make` command will generate a zip file containing everything needed to run 
 * chromedict_mac (darwin, untested)
 
 
-
 ## 3. Run pre-compiled version
 
 1. Unzip the zip file
 2. Start the server using the pre-compiled executable for your OS.
 3. Start Google Chrome and visit http://localhost:7654
 
----
+
 ## Requirements
 
 
