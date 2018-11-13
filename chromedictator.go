@@ -320,7 +320,7 @@ func saveEditedText(w http.ResponseWriter, r *http.Request) {
 	saveText(w, r, "edi")
 }
 
-func PrettyMarshal(thing interface{}) ([]byte, error) {
+func prettyMarshal(thing interface{}) ([]byte, error) {
 	var res []byte
 
 	j, err := json.Marshal(thing)
@@ -438,15 +438,15 @@ func writeJSON(jsonFilePath string, jsonObj audioJSON, overwrite bool) ([]string
 			respMessages = append(respMessages, msg)
 		}
 	}
-	jsonJSON, err := PrettyMarshal(jsonObj)
+	jsonJSON, err := prettyMarshal(jsonObj)
 	if err != nil {
 		msg := fmt.Sprintf("failed to marshal response struct to JSON : %v", err)
 		// http.Error(w, msg, http.StatusInternalServerError)
 		// return
 		return respMessages, fmt.Errorf("%s", msg)
 	}
-
-	err = ioutil.WriteFile(jsonFilePath, jsonJSON, 0644)
+	jsonString := string(jsonJSON) + "\n"
+	err = ioutil.WriteFile(jsonFilePath, []byte(jsonString), 0644)
 	if err != nil {
 		msg := fmt.Sprintf("failed to save json file '%s' : %v", jsonFilePath, err)
 		return respMessages, fmt.Errorf("%s", msg)
