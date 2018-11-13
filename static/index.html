@@ -13,10 +13,9 @@
 	    
 	    <div class="header content panel">
 		<div class="headertxt">
-		    STTS | Chrome Dictator | DEMO
+		    <b>STTS | Chrome Dictator | DEMO</b>
 		    <br>
-		    (Refreshed: <span id="refresh_time"></span>)<br>
-		    <a target="_blank" href="https://github.com/stts-se/chromedictator">Code</a>
+		    <em>Refreshed: <span id="refresh_time"></span></em><br>
 		</div>
 	    </div>
 
@@ -84,18 +83,18 @@
 		    <div class="content resizable selected-font" style="max-height:200px; overflow:auto;">
 			<details><summary class="title" style="margin-bottom: 15px">Abbrevs</summary>
 			    <span id="abbrev_table">
-			<table>
-			    <thead>
-				<tr>
-				    <th>Abbrev</th><th>Expansion</th><th></th>
-				</tr>				
-			    </thead>
-			    
-			    <tbody class="selected-font" id="abbrev_table_body">
-			    </tbody>			    
-			</table></span>
-		    </div>
+				<table>
+				    <thead>
+					<tr>
+					    <th>Abbrev</th><th>Expansion</th><th></th>
+					</tr>				
+				    </thead>
+				    
+				    <tbody class="selected-font" id="abbrev_table_body">
+				    </tbody>			    
+				</table></span>
 			</details>
+		    </div>
 		</div>
 		
 		<div class="shortcuts panel">
@@ -103,16 +102,15 @@
 			<details open><summary class="title" style="margin-bottom: 15px">Shortcuts</summary>
 			    <span id="shortcuts"></span>
 			</details>
-			
-			<!-- 			    <div class="title">Shortcuts</div>-->
-			<!-- 		    <div id="shortcuts" class="content"></div> -->
 		    </div>
 		</div>
 		
 		<div class="menu panel">
-		    <div class="title">Menu</div>
+		    <!-- <div class="title">Menu</div> -->
 		    <div class="content">
-			<a class="btn" target="_blank" href="/doc">Doc</a>
+			<a class="btn" target="_blank" href="/doc">API docs</a>
+			<a class="btn" target="_blank" href="https://github.com/stts-se/chromedictator">Code</a>
+			<span id="report_issue" class="btn" title="Requires github.com account">Report issue</span> <!-- &#x261B; -->
 		    </span>
 		    </div>
 		</div>
@@ -122,7 +120,7 @@
 	    <div class="leftmargin nobreak">
 		<div>
 		    <!--<button id="break_everything">Break Everything</button>
-		    <button style="display: none" id="unbreak_everything">Unbreak Everything</button> -->
+			 <button style="display: none" id="unbreak_everything">Unbreak Everything</button> -->
 		    
 		    <button id="dontclick">Don't click</button>
 		    <button style="display: none" id="toldyouso">Told you so!</button>

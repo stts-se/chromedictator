@@ -215,6 +215,13 @@ window.onload = function () {
     document.getElementById("current-utt").focus();
 }
 
+function createIssueReport() {
+    let url = "https://github.com/stts-se/chromedictator/issues/new?body=";
+    let prefix = "%0A";
+    //let verticalBar = "%20%7C%20";
+    window.open(url,'_blank');
+}
+
 function initAbbrevs() {
     loadAbbrevTable();
    
@@ -745,3 +752,5 @@ document.addEventListener("keyup", function() { globalShortcuts() });
 
 sessionField.addEventListener("keyup", function() { validateSessionName() });
 sessionField.addEventListener("change", function() { validateSessionName() });
+
+document.getElementById("report_issue").addEventListener("click", function() { createIssueReport() });
