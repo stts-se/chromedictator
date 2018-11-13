@@ -118,8 +118,8 @@ function initMediaAccess() {
 	    console.log("recorder.onstart completed");
 	} 
 	recorder.ondataavailable = async function (evt) {	    
-	    console.log("recorder.ondataavailable");
 	    let thisRecStart = new Date(recStartTime).toLocaleString();
+	    console.log("recorder.ondataavailable | sendAudio=" + sendAudio + ", thisRecStart=" + thisRecStart);
 	    recStartTime = null;
 	    document.getElementById("rec_duration").innerHTML = "&nbsp;"; 
 
