@@ -625,12 +625,14 @@ async function saveUttToList(session, fName, text, isEdited) {
 		textSpan = savedSpan;
 	    } else {
 		let tr = document.createElement("tr");
+		tr.setAttribute("class","highlightonhover");
 		tr.setAttribute("title",filenameBase);
 		textSpan = document.createElement("td")
 		textSpan.id = filenameBase;
+		textSpan.setAttribute("style","padding-left: 1em;");
 		let idSpan = document.createElement("td");
 		idSpan.textContent = shortFilenameBase();
-		idSpan.setAttribute("style","text-align: right; font-family: monospace");
+		idSpan.setAttribute("style","vertical-align: top; text-align: right; font-family: monospace; padding-right: 1em");
 		tr.appendChild(textSpan);
 		tr.appendChild(idSpan);
 		saved.appendChild(tr);

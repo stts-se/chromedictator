@@ -63,7 +63,7 @@
 
 #current-utt {
     margin-top: 2em;
-    width: 98%;
+    width: 95%;
     padding: 0.5em;
     min-height: 200px;
 }
@@ -71,6 +71,7 @@
 #saved-utts {
     min-height: 200px;
     padding-bottom: 1em;
+    /* margin-right: 2em; */
 }
 
 #sessionname {

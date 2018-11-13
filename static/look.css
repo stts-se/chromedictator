@@ -96,6 +96,10 @@
     color: white;
 }
 
+.highlightonhover:hover {
+    color: grey;
+}
+
 .btn:disabled {
     color: grey;
     border-color: grey !important;
