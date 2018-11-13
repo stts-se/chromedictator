@@ -53,7 +53,7 @@ The `make` command will generate a zip file containing everything needed to run 
 * Google Chrome
 
 
-## Files of the server session folder
+## Files ending up in the server's session folder
 
 ### .webm
 
