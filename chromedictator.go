@@ -406,6 +406,7 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
+	fmt.Printf("Server saved %s\n", textFilePath)
 
 	respMessages = append(respMessages, fmt.Sprintf("saved text file '%s'", textFilePath))
 	resp := RequestResponse{Message: strings.Join(respMessages, " : ")}

@@ -32,9 +32,9 @@
 			<div id="rec_duration">&nbsp;</div> 	
 			<audio id="audio" controls disabled></audio>
 			<div class="buttons">
-			    <button class="btn" id="rec_start">Rec</button>
-			    <button class="btn" id="rec_send">Send</button>
-			    <button class="btn" id="rec_cancel">Cancel</button>
+			    <button title="Ctrl-Space" class="btn" id="rec_start">Rec</button>
+			    <button title="Ctrl-Space" class="btn" id="rec_send">Send</button>
+			    <button title="Escape" class="btn" id="rec_cancel">Cancel</button>
 			</div>
 		    </div>
 		</div>
@@ -42,26 +42,12 @@
 	    
 	    <div class="centerpane">
 		<div class="textpane panel">
-		    <div class="title">Text</div>
+		    <div class="title">Saved text</div>
 		    <div class="content">
 			<div class="resizable" id="saved-utts">
-			    <!-- <div>
-				 Quisque egestas diam in arcu.
-				 </div>
-				 <div>
-				 Et malesuada fames ac turpis.
-				 </div>
-				 <div>
-				 Turpis tincidunt id aliquet risus!
-				 </div>
-				 <div>
-				 Aliquet sagittis id consectetur purus.
-				 </div>
-				 <div>
-				 Nascetur ridiculus mus mauris vitae.
-				 </div> -->
 			</div>
 			<textarea class="selected-font" id="current-utt"></textarea>
+			<button id="save_edited_text" title="Ctrl-Enter" class="btn">Save text</button>
 		    </div>
 		    
 		    <div id="recognition-result">
@@ -81,7 +67,7 @@
 
 		<div class="abbrevs panel">
 		    <div class="content resizable selected-font" style="max-height:200px; overflow:auto;">
-			<details><summary class="title" style="margin-bottom: 15px">Abbrevs</summary>
+			<details><summary class="title" style="margin-bottom: 15px">Abbrevs <span style="font-size: 75%" id="abbrev_count"></span> </summary>
 			    <span id="abbrev_table">
 				<table>
 				    <thead>

@@ -27,9 +27,10 @@ const recSendButton = document.getElementById("rec_send");
 const recCancelButton = document.getElementById("rec_cancel");
 const sessionField = document.getElementById("sessionname");
 
+const saveTextButton = document.getElementById("save_edited_text");
+
 var isRecording = false;
 
-var prevFilenameBase;
 var filenameBase;
 
 // TODO
@@ -45,7 +46,9 @@ window.onload = function () {
 
     disable(recCancelButton);
     disable(recSendButton);
-    
+    disable(saveTextButton);
+    disable(document.getElementById("current-utt"));
+
     var url = new URL(document.URL);
     var session = url.searchParams.get('session')
     if (session != null && session != "") {
@@ -82,9 +85,12 @@ window.onload = function () {
 		}
 		
 	    	finalResponse.value = text.trim();
+		finalResponse.focus();
 	    	tempResponse.innerHTML = "";
 
-		await textToServer(sessionField.value.trim(), filenameBase, text.trim(), false); // false: text from recogniser (not edited)
+		let isEdited = false;
+		let overwrite = false;
+		await textToServer(sessionField.value.trim(), filenameBase, text.trim(), isEdited, overwrite);
 		
 				
 	    } else {
@@ -157,18 +163,11 @@ window.onload = function () {
 	    }
 
 	    if (sendAudio) {
-
-		// save working text if unsaved
-		let oldText = document.getElementById("current-utt").value.trim();
-		if (oldText.length > 0) {
-		    await saveUttToList(sessionField.value.trim(), prevFilenameBase, oldText, true); // true : text is edited
-		}	    
-
 		let recEnd = new Date().toLocaleString();
 		
 		let ou = URL.createObjectURL(evt.data);
 		//currentBlobURL = ou;
-		console.log("Object URL ", ou);
+		//console.log("Object URL ", ou);
 		
 		var audio = document.getElementById('audio');
 		audio.src = ou;
@@ -224,29 +223,6 @@ function createIssueReport() {
 
 function initAbbrevs() {
     loadAbbrevTable();
-   
-    
-    // $("#add_abbrev_button").on('click', function(evt) {
-    // 	let abbrev = document.getElementById("input_abbrev").value.trim();
-    // 	let expansion = document.getElementById("input_expansion").value.trim();
-	
-    // 	// TODO add button should be disablem without text in both input fields, etc
-    // 	// TODO proper validation
-    // 	if (abbrev === "") {
-    // 	    document.getElementById("msg").innerText = "Cannot add empty abbreviation";
-    // 	    return;
-    // 	};
-    // 	if (expansion === "") {
-    // 	    document.getElementById("msg").innerText = "Cannot add empty expansion";
-    // 	    return;
-    // 	};
-	
-    // 	abbrevMap[abbrev] = expansion;
-	
-    // 	addAbbrev(abbrev, expansion);	
-
-    // });
-    
 }
 
 async function loadAbbrevTable() {
@@ -304,8 +280,8 @@ function updateAbbrevTable() {
     let td2 = document.createElement('td');
     let td3 = document.createElement('td');
     
-    td1.innerHTML = "<input id='abbrev_add_key' style='height: 20pt'/>";
-    td2.innerHTML = "<input id='abbrev_add_value' style='height: 20pt'/>";
+    td1.innerHTML = "<input id='abbrev_add_key' style='height: 20pt; font-size: 100%'/>";
+    td2.innerHTML = "<input id='abbrev_add_value' style='height: 20pt; font-size: 100%'/>";
     td3.setAttribute("class","abbrev_row_add");
     td3.setAttribute("style","vertical-align: middle");
     let add = document.createElement('button');
@@ -339,6 +315,10 @@ function updateAbbrevTable() {
     add.addEventListener('click', function(evt) {
 	addThisAbbrev();
     });
+
+    let nAbbrevs = Object.keys(abbrevMap).length;
+    document.getElementById("abbrev_count").textContent = "(" + nAbbrevs + ")";
+
 }
 
 async function addAbbrev(abbrev, expansion) {
@@ -410,11 +390,19 @@ function enable(element) {
     element.removeAttribute("disabled","false");
 }
 
-
 async function recStart() {
-    prevFilenameBase = filenameBase;
+    // save working text if unsaved
+    let current = document.getElementById("current-utt");
+    let text = current.value.trim();
+    if (text.length > 0) {
+	await saveUttToList(sessionField.value.trim(), filenameBase, text, true);
+	current.value = "";
+    }	    
+    
     filenameBase = newFilenameBase();
-    console.log("filenameBase set to " + filenameBase);
+    console.log("**** filenameBase set to " + filenameBase);
+    enable(saveTextButton);
+    enable(document.getElementById("current-utt"));
     await disable(recStartButton);
     await enable(recCancelButton);
     await enable(recSendButton);
@@ -429,9 +417,10 @@ recStartButton.addEventListener("click", async function() {
 });
 
 recCancelButton.addEventListener("click", function() {
-    prevFilenameBase = filenameBase;
     filenameBase = null;
-    console.log("filenameBase set to " + filenameBase);
+    console.log("**** filenameBase set to " + filenameBase);
+    disable(saveTextButton);
+    disable(document.getElementById("current-utt"));
     recognition.abort();
     enable(recStartButton);
     disable(recCancelButton);
@@ -517,7 +506,7 @@ function visualize() {
 
 async function soundToServer(payload) {
 
-    console.log("Här kommer ljud ", payload);
+    //console.log("Här kommer ljud ", payload);
     //if (payload.session_)
     
     let url = baseURL + "/save_audio";
@@ -551,15 +540,15 @@ async function soundToServer(payload) {
     })();
 };
 
-async function textToServer(sessionName, fileName, text, isEdited) {
+async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
 
-    console.log("textToServer", sessionName, fileName, text, isEdited);
+    console.log("textToServer", sessionName, fileName, text, isEdited, overwrite);
     
     let payload = {
 	"session_id" : sessionName,
 	"file_name" : fileName,
 	"data" : text,
-	"over_write" : false,
+	"over_write" : overwrite,
     };
     let res = true;
 
@@ -673,25 +662,27 @@ function toldYouSo() {
 const keyCodeEnter = 13;
 const keyCodeSpace = 32;
 const keyCodeEscape = 27;
-function saveOnCtrlEnter() {
-    if (event.ctrlKey && event.keyCode === keyCodeEnter) {
-	var src = event.srcElement
-	var text = src.value.trim();
-	saveUttToList(sessionField.value.trim(), filenameBase, text, true); // true: is edited
-	src.value = "";
-    }
-}
 
 async function saveUttToList(session, fName, text, isEdited) {
-	if (text.length > 0 && fName !== undefined && fName !== null) {
-	    if (await textToServer(session, fName, text, isEdited)) {
-		var saved = document.getElementById("saved-utts");
-		var div = document.createElement("div")
-		saved.appendChild(div);
-		div.textContent = text;
+    var savedDiv = document.getElementById(fName);
+    let savedIsUndefined = (savedDiv === undefined || savedDiv === null);
+    let overwrite = !savedIsUndefined;
+    console.log("saveUttToList", session, fName, text, isEdited, overwrite);
+    if (text.length > 0 && fName !== undefined && fName !== null) {
+	if (await textToServer(session, fName, text, isEdited, overwrite)) {
+	    var saved = document.getElementById("saved-utts");
+	    var div = null;
+	    if (overwrite) {
+		div = savedDiv;
+	    } else {
+		div = document.createElement("div")
 		div.id = filenameBase;
+		div.setAttribute("title",filenameBase);
+		saved.appendChild(div);
 	    }
+	    div.textContent = text;
 	}
+    }
 }
 
 function globalShortcuts() {
@@ -740,6 +731,32 @@ function validateSessionName() {
     }
 }
 
+function logTextChanged() {
+    let savedDiv = document.getElementById(filenameBase);
+    let text = document.getElementById("current-utt").value.trim();
+    let savedText = "";
+    if (savedDiv !== undefined && savedDiv !== null)
+	savedText = savedDiv.textContent.trim();
+    // console.log("saved text", savedText);
+    // console.log("current text", text);
+    let textChanged = (savedText != text);
+    if (textChanged) 
+	enable(saveTextButton);
+    else
+     	disable(saveTextButton);
+}
+
+function saveOnCtrlEnter() {
+    if (event.ctrlKey && event.keyCode === keyCodeEnter) {
+	saveTextButton.click();
+    }
+}
+function saveEditedText() {
+    let src = document.getElementById("current-utt");
+    let text = src.value.trim();
+    saveUttToList(sessionField.value.trim(), filenameBase, text, true);
+}
+
 //document.getElementById("break_everything").addEventListener("click", function() { breakEverything();})
 //document.getElementById("unbreak_everything").addEventListener("click", function() { unbreakEverything();})
 document.getElementById("dontclick").addEventListener("click", function() { dontClick();})
@@ -754,3 +771,6 @@ sessionField.addEventListener("keyup", function() { validateSessionName() });
 sessionField.addEventListener("change", function() { validateSessionName() });
 
 document.getElementById("report_issue").addEventListener("click", function() { createIssueReport() });
+saveTextButton.addEventListener("click", function() { saveEditedText() });
+document.getElementById("current-utt").addEventListener("keyup", function() { logTextChanged() });
+//document.getElementById("current-utt").addEventListener("change", function() { logTextChanged() });
