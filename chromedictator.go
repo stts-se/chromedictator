@@ -237,7 +237,7 @@ func deleteAbbrev(w http.ResponseWriter, r *http.Request) {
 	abbrevMutex.Unlock() // Can't use defer here, since call below uses
 	// locking
 
-	// This could be done consurrently, but easier to catch errors this way
+	// This could be done concurrently, but easier to catch errors this way
 	err := persistAbbrevs()
 	if err != nil {
 		msg := fmt.Sprintf("deleteAbbrev: failed to save abbrev map to gob file : %v", err)
@@ -274,7 +274,7 @@ func (ao TextObject) validate() []string {
 	return res
 }
 
-// audioJSON holds values that can be used to produce an audio file
+// audioJSON holds values that can be used to produce a json file with a recording's metadata
 type audioJSON struct {
 	SessionID string `json:"session_id"`
 	//FileName  string `json:"file_name"`
@@ -320,6 +320,7 @@ func saveEditedText(w http.ResponseWriter, r *http.Request) {
 	saveText(w, r, "edi")
 }
 
+// prettyMarshal returns a byte array with prettier formatted json (line breaks, etc)
 func prettyMarshal(thing interface{}) ([]byte, error) {
 	var res []byte
 
@@ -333,6 +334,8 @@ func prettyMarshal(thing interface{}) ([]byte, error) {
 		return res, err
 	}
 	res = prettyJSON.Bytes()
+	tmp := string(res) + "\n"
+	res = []byte(tmp)
 	return res, nil
 }
 
@@ -386,6 +389,16 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 	writeMutex.Lock()
 	defer writeMutex.Unlock()
 
+	msg, err := checkAudioDirs(to.SessionID)
+	if err != nil {
+		log.Println(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+	if msg != "" {
+		respMessages = append(respMessages, msg)
+	}
+
 	if _, err := os.Stat(textFilePath); !os.IsNotExist(err) {
 		if !to.OverWrite {
 			msg := fmt.Sprintf("file with the same session ID and file name already exists: %s/%s.%s\nTo overwrite set over_write:true", to.SessionID, to.FileName, ext)
@@ -426,6 +439,7 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 }
 
 func writeJSON(jsonFilePath string, jsonObj audioJSON, overwrite bool) ([]string, error) {
+	//fmt.Printf("ANKEBORG\t%v\n", jsonObj)
 	respMessages := []string{}
 	if _, err := os.Stat(jsonFilePath); !os.IsNotExist(err) {
 		if overwrite {
@@ -439,15 +453,14 @@ func writeJSON(jsonFilePath string, jsonObj audioJSON, overwrite bool) ([]string
 			respMessages = append(respMessages, msg)
 		}
 	}
-	jsonJSON, err := prettyMarshal(jsonObj)
+	jsonPretty, err := prettyMarshal(jsonObj)
 	if err != nil {
 		msg := fmt.Sprintf("failed to marshal response struct to JSON : %v", err)
 		// http.Error(w, msg, http.StatusInternalServerError)
 		// return
 		return respMessages, fmt.Errorf("%s", msg)
 	}
-	jsonString := string(jsonJSON) + "\n"
-	err = ioutil.WriteFile(jsonFilePath, []byte(jsonString), 0644)
+	err = ioutil.WriteFile(jsonFilePath, jsonPretty, 0644)
 	if err != nil {
 		msg := fmt.Sprintf("failed to save json file '%s' : %v", jsonFilePath, err)
 		return respMessages, fmt.Errorf("%s", msg)
@@ -456,6 +469,21 @@ func writeJSON(jsonFilePath string, jsonObj audioJSON, overwrite bool) ([]string
 	}
 	fmt.Printf("Server saved %s\n", jsonFilePath)
 	return respMessages, nil
+}
+
+func checkAudioDirs(sessionID string) (string, error) {
+	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
+		return "", fmt.Errorf("base dir not found: %v", err)
+	}
+
+	if _, err := os.Stat(path.Join(baseDir, sessionID)); os.IsNotExist(err) {
+		err := os.Mkdir(path.Join(baseDir, sessionID), os.ModePerm)
+		if err != nil {
+			return "", fmt.Errorf("failed to create session ID dir : %v", err)
+		}
+		return fmt.Sprintf("created new session id dir: '%s'", path.Join(baseDir, sessionID)), nil
+	}
+	return "", nil
 }
 
 func saveAudio(w http.ResponseWriter, r *http.Request) {
@@ -503,22 +531,14 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 	writeMutex.Lock()
 	defer writeMutex.Unlock()
 
-	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
-		msg := fmt.Sprintf("base dir not found: %v", err)
-		log.Println("[chromedictator] " + msg)
-		http.Error(w, msg, http.StatusInternalServerError)
+	msg, err := checkAudioDirs(ao.SessionID)
+	if err != nil {
+		log.Println(msg)
+		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
-
-	if _, err := os.Stat(path.Join(baseDir, ao.SessionID)); os.IsNotExist(err) {
-		err := os.Mkdir(path.Join(baseDir, ao.SessionID), os.ModePerm)
-		if err != nil {
-			msg := fmt.Sprintf("failed to create session ID dir : %v", err)
-			log.Println("[chromedictator] " + msg)
-			http.Error(w, msg, http.StatusInternalServerError)
-			return
-		}
-		respMessages = append(respMessages, fmt.Sprintf("created new session id dir: '%s'", path.Join(baseDir, ao.SessionID)))
+	if msg != "" {
+		respMessages = append(respMessages, msg)
 	}
 
 	jsonObj := audioJSON{

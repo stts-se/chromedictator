@@ -42,9 +42,18 @@
 	    
 	    <div class="centerpane">
 		<div class="textpane panel">
-		    <div class="title">Saved text</div>
+		    <!-- <div class="title">Saved text</div> -->
 		    <div class="content">
 			<div class="resizable" id="saved-utts">
+			    <table>
+				<thead>
+				    <tr class="title">
+					<td style="min-width: 400px;">Saved text</td>
+					<td style="style=padding-left: 20px; text-align: right; width: 100%">ID</td>
+				    </tr>
+				</thead>
+				<tbody id="saved-utts-table"></tbody>
+			    </table>
 			</div>
 			<textarea class="selected-font" id="current-utt"></textarea>
 			<button id="save_edited_text" title="Ctrl-Enter" class="btn">Save text</button>

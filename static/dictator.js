@@ -1,11 +1,17 @@
 "use strict";
 
+let baseURL = window.location.protocol + '//' + window.location.host + window.location.pathname.replace(/\/$/g,"");
 
 // See e.g.:
 // https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API 
 // https://mozdevs.github.io/MediaRecorder-examples/record-live-audio.html
 // https://github.com/mdn/voice-change-o-matic
 // https://github.com/mdn/voice-change-o-matic/blob/gh-pages/scripts/app.js
+
+
+const keyCodeEnter = 13;
+const keyCodeSpace = 32;
+const keyCodeEscape = 27;
 
 var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 var recorder;
@@ -19,8 +25,6 @@ visAnalyser.smoothingTimeConstant = 0.85;
 var visCanvas = document.querySelector('.visualiser');
 var visCanvasCtx = visCanvas.getContext("2d");
 
-var recStartTime;
-
 const recStartButton = document.getElementById("rec_start");
 const recSendButton = document.getElementById("rec_send");
 const recCancelButton = document.getElementById("rec_cancel");
@@ -28,57 +32,170 @@ const sessionField = document.getElementById("sessionname");
 
 const saveTextButton = document.getElementById("save_edited_text");
 
-var isRecording = false;
-
 var filenameBase;
-
-let baseURL = window.location.protocol + '//' + window.location.host + window.location.pathname.replace(/\/$/g,"");
-//var baseURL = window.origin;
-
+var recStartTime;
+var isRecording = false;
 var sendAudio = false;
 
 var abbrevMap = {};
 
+
+// ------------------
+// INITIALISATION
+
 window.onload = function () {
 
-    disable(recCancelButton);
-    disable(recSendButton);
-    disable(saveTextButton);
-    disable(document.getElementById("current-utt"));
+    document.getElementById("refresh_time").innerText = new Date().toLocaleString();
 
     var url = new URL(document.URL);
     var session = url.searchParams.get('session')
     if (session != null && session != "") {
 	sessionField.value = session.trim();
     }
-
+    validateSessionName();
     
-    // google speech rec
+    disable(recCancelButton);
+    disable(recSendButton);
+    disable(saveTextButton);
+    disable(document.getElementById("current-utt"));
+
+    initAbbrevs();
+    populateShortcuts();
+
+    initWebkitSpeechRecognition();
+    initMediaAccess();
+    
+    document.getElementById("current-utt").focus();
+}
+
+window.onbeforeunload = function() {
+    return "Are you sure you want to navigate away?";
+}
+
+document.addEventListener("keyup", function() { globalKeyListener() });
+
+function initMediaAccess() {
+    var source;
+    var stream;
+    var mediaAccess = navigator.mediaDevices.getUserMedia({'audio': true, video: false});
+    
+    mediaAccess.then(function(stream) {
+	visualize();
+	source = audioCtx.createMediaStreamSource(stream);
+        source.connect(visAnalyser);
+	recorder = new MediaRecorder(stream);
+	recorder.onstop = function(evt) {
+	    console.log("recorder.onstop called");
+	    enable(recStartButton);
+	    disable(recCancelButton);
+	    disable(recSendButton);
+	    document.getElementById("rec_duration").innerHTML = "&nbsp;";
+	    isRecording = false;
+	    console.log("recorder.onstop completed");
+	} 
+	recorder.onerror = function(evt) {
+	    console.log("recorder.onerror");
+	}
+	recorder.onstart = async function(evt) {
+	    console.log("recorder.onstart called");
+	    // save working text if unsaved
+	    let current = document.getElementById("current-utt");
+	    let text = current.value.trim();
+	    if (text.length > 0) {
+		let fnb = filenameBase;
+		await saveUttToList(sessionField.value.trim(), fnb, text, true);
+		current.value = "";
+	    }
+	    // prepare new recording
+	    renewFilenameBase();
+	    enable(saveTextButton);
+	    enable(document.getElementById("current-utt"));
+	    await disable(recStartButton);
+	    await enable(recCancelButton);
+	    await enable(recSendButton);
+	    recStartTime = new Date().getTime();
+	    isRecording = true;
+	    console.log("recorder.onstart completed");
+	} 
+	recorder.ondataavailable = async function (evt) {	    
+	    console.log("recorder.ondataavailable");
+	    let thisRecStart = new Date(recStartTime).toLocaleString();
+	    recStartTime = null;
+	    document.getElementById("rec_duration").innerHTML = "&nbsp;"; 
+
+	    let sess = sessionField.value.trim();
+	    if (sess.length === 0) {
+		logMessage("error","cannot send audio with empty session id");
+		return;
+	    }
+
+	    if (sendAudio) {
+		let recEnd = new Date().toLocaleString();
+		
+		let ou = URL.createObjectURL(evt.data);
+		
+		var audio = document.getElementById('audio');
+		audio.src = ou;
+		audio.disabled = false;
+	    
+		let blob = await fetch(ou).then(r => r.blob());
+
+		let reader = new FileReader();
+		reader.addEventListener("loadend", function() {
+		    let rez = reader.result;
+		    let payload = {
+			"session_id" : sess,
+			"file_name" : filenameBase,
+			"data" : btoa(rez),
+			"file_extension" : blob.type,
+			"over_write" : false,
+			"start_time": thisRecStart,
+			"end_time": recEnd,
+		    };
+		    soundToServer(payload);
+		});
+		reader.readAsBinaryString(blob);
+			
+	    };
+	};
+	
+    });
+    
+    mediaAccess.catch(function(err) {
+	console.log("error from getUserMedia:", err);
+	let msg = "Couldn't initialize recorder: " + err;
+	alert(msg);
+	logMessage("error", msg);
+    });
+    
+}
+
+function initWebkitSpeechRecognition() {
+    // Google speech rec 
     if (!('webkitSpeechRecognition' in window)) {
 	alert("This browser does not support webkit speech recognition. Try Google Chrome.");
 	return;
     };
 
-    initAbbrevs();
-    
     recognition = new webkitSpeechRecognition();
     let tempResponse = document.querySelector("#recognition-result .content");
     let finalResponse = document.getElementById("current-utt");
     finalResponse.addEventListener('keyup', checkForAbbrev);
-    // finalResponse.addEventListener('keyup', signalUnsavedEdit);
     recognition.lang = "sv";
     recognition.continuous = true;
     recognition.interimResults = true;
     
+    // on result from speech rec
     recognition.onresult = async function(event) {
-	console.log("recognition.onresult");
 	for (var i = event.resultIndex; i < event.results.length; ++i) {
 	    let text = event.results[i][0].transcript.trim();
 	    if (event.results[i].isFinal) {
+		console.log("recognition.onresult final");
 
+		// stop recorder if it's running
 		if (isRecording) {
-		    await stopAndSend("rec auto break");
-		    await recStart("rec auto break");
+		    recorder.stop();
+		    recorder.start();
 		}
 		
 	    	finalResponse.value = text.trim();
@@ -98,22 +215,36 @@ window.onload = function () {
 
     recognition.onstart = function() {
 	console.log("recognition.onstart");
+	if (!isRecording) {
+	    try {
+		recorder.start();
+	    } catch {}
+	}
     }
     
     recognition.onend = function() {
 	console.log("recognition.onend");
 	if (isRecording) {
-	    stopAndSend();
+	    try {
+		recorder.stop();
+	    } catch {}
 	}
-	enable(recStartButton);
-	disable(recSendButton);
-	disable(recCancelButton);
     };
-    
+
+    recognition.onspeechstart = function() {
+	console.log("recognition.onspeechstart");
+	if (!isRecording) {
+	    try {
+		recorder.start();
+	    } catch {}
+	}
+    };
     recognition.onspeechend = function() {
 	console.log("recognition.onspeechend");
 	if (isRecording) {
-	    stopAndSend();
+	    try {
+		recorder.stop();
+	    } catch {}
 	}
     };
     
@@ -136,110 +267,38 @@ window.onload = function () {
 	    logMessage("info", "Recording got error '" + event.error + "'");
 	}
 	audio.src = "";
-	// enable(recStartButton);
-	// disable(recSendButton);
-	// disable(recCancelButton);
+	try {
+	    recorder.stop();
+	} catch {}
+	enable(recStartButton);
+	disable(recSendButton);
+	disable(recCancelButton);
     };
 
     
-    var source;
-    var stream;
-    
-    var mediaAccess = navigator.mediaDevices.getUserMedia({'audio': true, video: false});
-    
-    mediaAccess.then(function(stream) {
-	visualize();
-	source = audioCtx.createMediaStreamSource(stream);
-        source.connect(visAnalyser);
-	recorder = new MediaRecorder(stream);
-	recorder.onstop = function(evt) {
-	    console.log("recorder.onstop");
-	    isRecording = false;
-	} 
-	recorder.onstart = function(evt) {
-	    console.log("recorder.onstart");
-	    isRecording = true;
-	} 
-	recorder.addEventListener('dataavailable', async function (evt) {	    
-	    console.log("recorder dataavailable");
-	    let thisRecStart = new Date(recStartTime).toLocaleString();
-	    recStartTime = null;
-	    document.getElementById("rec_duration").innerHTML = "&nbsp;"; // TODO: called twice, async issue
-
-	    let sess = sessionField.value.trim();
-	    if (sess.length === 0) {
-		logMessage("error","cannot send audio with empty session id");
-		return;
-	    }
-
-	    if (sendAudio) {
-		let recEnd = new Date().toLocaleString();
-		
-		let ou = URL.createObjectURL(evt.data);
-		//currentBlobURL = ou;
-		//console.log("Object URL ", ou);
-		
-		var audio = document.getElementById('audio');
-		audio.src = ou;
-		audio.disabled = false;
-	    
-		let blob = await fetch(ou).then(r => r.blob());
-		//console.log("EN BLÅBB ", blob);
-
-		let reader = new FileReader();
-		reader.addEventListener("loadend", function() {
-		    let rez = reader.result;
-		    let payload = {
-			"session_id" : sess,
-			"file_name" : filenameBase,
-			"data" : btoa(rez),
-			"file_extension" : blob.type,
-			"over_write" : false,
-			"start_time": thisRecStart,
-			"end_time": recEnd,
-		    };
-		    soundToServer(payload);		    
-		});
-		reader.readAsBinaryString(blob);
-			
-	    };
-	});
-	
-    });
-    
-    mediaAccess.catch(function(err) {
-	console.log("error from getUserMedia:", err);
-	let msg = "Couldn't initialize recorder: " + err;
-	alert(msg);
-	logMessage("error", msg);
-    });
-    
-
-    populateShortcuts();
-    
-    document.getElementById("refresh_time").innerText = new Date().toLocaleString();
-
-    validateSessionName();
-    
-    document.getElementById("current-utt").focus();
-}
-
-function createIssueReport() {
-    let url = "https://github.com/stts-se/chromedictator/issues/new?body=";
-    let prefix = "%0A";
-    //let verticalBar = "%20%7C%20";
-    window.open(url,'_blank');
 }
 
 function initAbbrevs() {
     loadAbbrevTable();
 }
 
+function populateShortcuts() {
+    document.getElementById("shortcuts").innerHTML = "<table>" +
+	"<tr><td style='text-align: right'>Ctrl-Space :</td><td>Start/Send recording</td></tr>" +
+	"<tr><td style='text-align: right'>Ctrl-Enter :</td><td>Save text</td></tr>" +
+	"<tr><td style='text-align: right'>Escape :</td><td>Cancel recording</td></tr>" + 
+	"</table>";
+}
+
+
+
+// ------------------
+// ABBREVS
+
 async function loadAbbrevTable() {
     await fetch(baseURL+ "/abbrev/list").then(async function(r) {
 	if (r.ok) {
 	    let serverAbbrevs = await r.json();
-	    //console.log("#######", serverAbbrevs);
 	    abbrevMap = {};
 	    for (var i = 0; i < serverAbbrevs.length; i++) {
 		//console.log("i: ", i, serverAbbrevs[i]);
@@ -252,8 +311,6 @@ async function loadAbbrevTable() {
 	}
     });
 };
-
-
 
 function updateAbbrevTable() {
     let at = document.getElementById("abbrev_table_body");
@@ -392,89 +449,8 @@ function checkForAbbrev(evt) {
 }
 
 
-function disable(element) {
-    element.setAttribute("disabled","true");
-}
-
-function enable(element) {
-    element.removeAttribute("disabled","false");
-}
-
-async function recStart(caller) {
-    console.log("recStart() called from " + caller);
-    // save working text if unsaved
-    let current = document.getElementById("current-utt");
-    let text = current.value.trim();
-    if (text.length > 0) {
-	let fnb = filenameBase;
-	await saveUttToList(sessionField.value.trim(), fnb, text, true);
-	current.value = "";
-    }    
-    filenameBase = newFilenameBase();
-    console.log("**** filenameBase set to " + filenameBase);
-    enable(saveTextButton);
-    enable(document.getElementById("current-utt"));
-    await disable(recStartButton);
-    await enable(recCancelButton);
-    await enable(recSendButton);
-    recStartTime = new Date().getTime();
-    await recorder.start();
-    logMessage("info", "Recording started");
-    console.log("recStart() completed call from " + caller);
-}
-
-recStartButton.addEventListener("click", async function() {
-    //if (!isRecording) {
-	await recStart("button click");
-	recognition.start();
-    //}
-});
-
-recCancelButton.addEventListener("click", function() {
-    filenameBase = null;
-    console.log("**** filenameBase set to " + filenameBase);
-    disable(saveTextButton);
-    disable(document.getElementById("current-utt"));
-    recognition.abort();
-    enable(recStartButton);
-    disable(recCancelButton);
-    disable(recSendButton);
-    sendAudio = false;
-    try {
-	recorder.stop();
-    } catch {
-	console.log("couldn't stop recorder (not running)");
-    }
-    document.getElementById("rec_duration").innerHTML = "&nbsp;";
-    //recStartTime = null;
-});
-
-
-var currentBlobURL = null;
-
-async function stopAndSend(caller) {
-    console.log("stopAndSend() called from " + caller);
-    await enable(recStartButton);
-    await disable(recCancelButton);
-    await disable(recSendButton);
-    sendAudio = true;
-    try {
-	await recorder.stop();
-    } catch {
-	console.log("couldn't stop recorder (not running)");
-    }
-		 
-    document.getElementById("rec_duration").innerHTML = "&nbsp;";
-    console.log("stopAndSend() completed call from " + caller);
-}
-
-recSendButton.addEventListener("click", async function() {    
-    //if (isRecording) {
-	await stopAndSend("button click");
-	recognition.stop();
-    //}
-});
-
+// -------------------
+// VISUAL FEEDBACK (visual feedback on audio input; black pane with red bars)
 function visualize() {
 
     var WIDTH = visCanvas.width;
@@ -489,9 +465,7 @@ function visualize() {
     var draw = function() {
 	if (recStartTime != null) {
 	    var recDur = new Date().getTime() - recStartTime;
-	    //if (recDur % 1000 === 0) {
 	    document.getElementById("rec_duration").textContent = Math.floor(recDur/1000) + "s";
-	    //}
 	}
     
 	var drawVisual = requestAnimationFrame(draw);
@@ -516,27 +490,27 @@ function visualize() {
 		x += barWidth + 1;
 	    };
 	}
-    };
-    
+    };    
     draw(); 
 }
 
-// payload: {"session_id": "sess1", "file_name":"sentence1", "data": "GkXfo59ChoEBQ ..."}
-// type AudioObject struct {
-// 	SessionID string `json:"session_id"`
-// 	FileName  string `json:"file_name"`
-// 	TimeStamp string `json:"time_stamp"`
-// 	FileType  string `json:"file_type"`
-// 	Data      string `json:"data"`
-// }
 
+// -----------------
+// SAVE TO SERVER
 
+// Send audio to server for saving (with metadata defined in json input)
+// sample json input: {
+// 	"session_id" : "default",
+// 	"file_name" : "0e15b20e-cde8-4a17-93f3-c8322b873fb3"
+// 	"data" : <audio data>,
+// 	"file_extension" : "webm",
+// 	"over_write" : "false",
+// 	"start_time": "11/13/2018, 12:18:08 PM",
+// 	"end_time": "11/13/2018, 12:18:10 PM"
+// };
 async function soundToServer(payload) {
 
     console.log("soundToServer", payload);
-    
-    //console.log("Här kommer ljud ", payload);
-    //if (payload.session_)
     
     let url = baseURL + "/save_audio";
     
@@ -569,6 +543,8 @@ async function soundToServer(payload) {
     })();
 };
 
+
+// Send a single text utterance to server for saving (with metadata)
 async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
 
     console.log("textToServer", sessionName, fileName, text, isEdited, overwrite);
@@ -625,20 +601,168 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
     return res;
 };
 
+// Save current utterance text to server, and append or update table with saved text
+async function saveUttToList(session, fName, text, isEdited) {
+    var savedSpan = document.getElementById(fName);
+    let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
+    let overwrite = !savedIsUndefined;
+    console.log("saveUttToList", session, fName, text, isEdited, overwrite);
+    if (text.length > 0 && fName !== undefined && fName !== null) {
+	if (await textToServer(session, fName, text, isEdited, overwrite)) {
+	    var saved = document.getElementById("saved-utts-table");
+	    var textSpan = null;
+	    if (overwrite) {
+		textSpan = savedSpan;
+	    } else {
+		let tr = document.createElement("tr");
+		tr.setAttribute("title",filenameBase);
+		textSpan = document.createElement("td")
+		textSpan.id = filenameBase;
+		let idSpan = document.createElement("td");
+		idSpan.textContent = shortFilenameBase();
+		idSpan.setAttribute("style","text-align: right; font-family: monospace");
+		tr.appendChild(textSpan);
+		tr.appendChild(idSpan);
+		saved.appendChild(tr);
+	    }
+	    textSpan.textContent = text;
+	}
+    }
+}
+
+function saveEditedText() {
+    let src = document.getElementById("current-utt");
+    let text = src.value.trim();
+    saveUttToList(sessionField.value.trim(), filenameBase, text, true);
+}
+
+
+// -------------------
+// MISC
+
+function validateSessionName() {
+    if (sessionField.value.trim().length > 0) {
+	enable(recStartButton);
+	sessionField.style['border-color'] = "";
+   }
+    else {
+	logMessage("info","session name is empty");
+	disable(recStartButton);
+	sessionField.style['border-color'] = "red";
+    }
+}
+
+function trackTextChanges() {
+    let savedSpan = document.getElementById(filenameBase);
+    let text = document.getElementById("current-utt").value.trim();
+    let savedText = "";
+    if (savedSpan !== undefined && savedSpan !== null)
+	savedText = savedSpan.textContent.trim();
+    let textChanged = (savedText != text);
+    if (textChanged) 
+	enable(saveTextButton);
+    else
+     	disable(saveTextButton);
+}
+
+recStartButton.addEventListener("click", async function() {
+    console.log("recStartButton clicked");
+    recorder.start();
+    recognition.start();
+});
+
+recCancelButton.addEventListener("click", function() {
+    console.log("recCancelButton clicked");
+    sendAudio = false;
+    recognition.abort();
+    recorder.stop("cancel");
+});
+
+
+recSendButton.addEventListener("click", async function() {    
+    console.log("recSendButton clicked");
+    sendAudio = true;
+    recognition.stop();
+    recorder.stop("send");
+});
+
+sessionField.addEventListener("keyup", function() { validateSessionName() });
+sessionField.addEventListener("change", function() { validateSessionName() });
+
+document.getElementById("report_issue").addEventListener("click", function() { createIssueReport() });
+
+document.getElementById("current-utt").addEventListener("keyup", function() { trackTextChanges() });
+document.getElementById("current-utt").addEventListener("changed", function() { trackTextChanges() });
+
+document.getElementById("current-utt").addEventListener("keyup", function() {
+        if (event.ctrlKey && event.keyCode === keyCodeEnter) {
+	saveTextButton.click();
+	}
+});
+
+saveTextButton.addEventListener("click", function() { saveEditedText() });
+
+
+
+// ------------------
+// UTILS
+
 function logMessage(title, text) {
     console.log(title, text);
     document.getElementById("messages").textContent = title + ": " + text;    
 }
 
-
-window.onbeforeunload = function() {
-    return "Are you sure you want to navigate away?";
+// Create UUID | Snippet lifted from https://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript#2117523:
+function uuidv4() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+  )
 }
 
+function createIssueReport() {
+    let url = "https://github.com/stts-se/chromedictator/issues/new?body=";
+    let prefix = "%0A";
+    //let verticalBar = "%20%7C%20";
+    window.open(url,'_blank');
+}
+
+function disable(element) {
+    element.setAttribute("disabled","true");
+}
+
+function enable(element) {
+    element.removeAttribute("disabled","false");
+}
 
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+function shortFilenameBase() {
+    return filenameBase.substring(0,8);
+}
+
+function renewFilenameBase() {
+    filenameBase = uuidv4();
+    console.log("**** filenameBase set to " + filenameBase);
+}
+
+function globalKeyListener() {
+    if (event.keyCode === keyCodeEscape && !recCancelButton.disabled) {
+	recCancelButton.click();
+    }
+    if (event.ctrlKey && event.keyCode === keyCodeSpace) {
+	if (!recSendButton.disabled)
+	    recSendButton.click();
+	else if  (!recStartButton.disabled) {
+	    recStartButton.click();
+	}
+    }    
+}
+
+
+// -----------------
+// ... AND FINALLY SOME FUN!
 
 function breakEverything() {
     let divs = document.querySelectorAll("div");
@@ -689,120 +813,8 @@ function toldYouSo() {
 
 }
 
-
-
-const keyCodeEnter = 13;
-const keyCodeSpace = 32;
-const keyCodeEscape = 27;
-
-async function saveUttToList(session, fName, text, isEdited) {
-    var savedDiv = document.getElementById(fName);
-    let savedIsUndefined = (savedDiv === undefined || savedDiv === null);
-    let overwrite = !savedIsUndefined;
-    console.log("saveUttToList", session, fName, text, isEdited, overwrite);
-    if (text.length > 0 && fName !== undefined && fName !== null) {
-	if (await textToServer(session, fName, text, isEdited, overwrite)) {
-	    var saved = document.getElementById("saved-utts");
-	    var div = null;
-	    if (overwrite) {
-		div = savedDiv;
-	    } else {
-		div = document.createElement("div")
-		div.id = filenameBase;
-		div.setAttribute("title",filenameBase);
-		saved.appendChild(div);
-	    }
-	    div.textContent = text;
-	}
-    }
-}
-
-function globalShortcuts() {
-    if (event.keyCode === keyCodeEscape && !recCancelButton.disabled) {
-	recCancelButton.click();
-    }
-    if (event.ctrlKey && event.keyCode === keyCodeSpace) {
-	if (!recSendButton.disabled)
-	    recSendButton.click();
-	else if  (!recStartButton.disabled) {
-	    recStartButton.click();
-	}
-    }
-    
-}
-
-
-function newFilenameBase() {
-    return uuidv4();
-}
-
-// Snippet lifted from https://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript#2117523:
-function uuidv4() {
-  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-  )
-}
-
-function populateShortcuts() {
-    document.getElementById("shortcuts").innerHTML = "<table>" +
-	"<tr><td style='text-align: right'>Ctrl-Space :</td><td>Start/Send recording</td></tr>" +
-	"<tr><td style='text-align: right'>Ctrl-Enter :</td><td>Save text</td></tr>" +
-	"<tr><td style='text-align: right'>Escape :</td><td>Cancel recording</td></tr>" + 
-	"</table>";
-}
-
-function validateSessionName() {
-    if (sessionField.value.trim().length > 0) {
-	enable(recStartButton);
-	sessionField.style['border-color'] = "";
-   }
-    else {
-	logMessage("info","session name is empty");
-	disable(recStartButton);
-	sessionField.style['border-color'] = "red";
-    }
-}
-
-function logTextChanged() {
-    let savedDiv = document.getElementById(filenameBase);
-    let text = document.getElementById("current-utt").value.trim();
-    let savedText = "";
-    if (savedDiv !== undefined && savedDiv !== null)
-	savedText = savedDiv.textContent.trim();
-    // console.log("saved text", savedText);
-    // console.log("current text", text);
-    let textChanged = (savedText != text);
-    if (textChanged) 
-	enable(saveTextButton);
-    else
-     	disable(saveTextButton);
-}
-
-function saveOnCtrlEnter() {
-    if (event.ctrlKey && event.keyCode === keyCodeEnter) {
-	saveTextButton.click();
-    }
-}
-function saveEditedText() {
-    let src = document.getElementById("current-utt");
-    let text = src.value.trim();
-    saveUttToList(sessionField.value.trim(), filenameBase, text, true);
-}
-
 //document.getElementById("break_everything").addEventListener("click", function() { breakEverything();})
 //document.getElementById("unbreak_everything").addEventListener("click", function() { unbreakEverything();})
 document.getElementById("dontclick").addEventListener("click", function() { dontClick();})
 document.getElementById("toldyouso").addEventListener("click", function() { toldYouSo();})
 
-
-document.getElementById("current-utt").addEventListener("keyup", function() { saveOnCtrlEnter();})
-
-document.addEventListener("keyup", function() { globalShortcuts() });
-
-sessionField.addEventListener("keyup", function() { validateSessionName() });
-sessionField.addEventListener("change", function() { validateSessionName() });
-
-document.getElementById("report_issue").addEventListener("click", function() { createIssueReport() });
-saveTextButton.addEventListener("click", function() { saveEditedText() });
-document.getElementById("current-utt").addEventListener("keyup", function() { logTextChanged() });
-//document.getElementById("current-utt").addEventListener("change", function() { logTextChanged() });
