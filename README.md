@@ -40,8 +40,8 @@ The `make` command will generate a zip file containing everything needed to run 
 2. Start the server using the pre-compiled executable for your OS.
 3. Start Google Chrome and visit http://localhost:7654
 
-
-### Requirements
+---
+## Requirements
 
 
 * Google Chrome
