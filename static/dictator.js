@@ -178,6 +178,16 @@ function initWebkitSpeechRecognition() {
     };
 
     recognition = new webkitSpeechRecognition();
+
+    let langSelect = document.getElementById("lang_select");
+    langSelect.addEventListener("change", function(event) {
+	var i  = langSelect.selectedIndex
+	var lang = langSelect.options[i].value;
+	recognition.lang = lang;
+	logMessage("info", "language set to: " + recognition.lang);
+    });
+
+
     let tempResponse = document.querySelector("#recognition-result .content");
     let finalResponse = document.getElementById("current-utt");
     finalResponse.addEventListener('keyup', checkForAbbrev);

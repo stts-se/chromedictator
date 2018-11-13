@@ -61,10 +61,9 @@
     grid-row: 2;
 }
 
-
 #current-utt {
     margin-top: 2em;
-    width: 100%;
+    width: 98%;
     padding: 0.5em;
     min-height: 200px;
 }
@@ -77,7 +76,6 @@
 #sessionname {
     width: 100%;
 }
-
 
 
 /* LEFT PANE */

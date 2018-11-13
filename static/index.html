@@ -20,11 +20,24 @@
 	    </div>
 
 	    <div class="leftpane">
-		<div class="session panel">
-		    <div class="title">Session name</div>
-		    <div class="content"><input id="sessionname" class="selected-font" value="default"/></div>
-		</div>
 
+		<div class="settings panel">
+		    <div class="title">Settings</div>
+		
+		    <div class="content">
+			<div style="padding-bottom: 0.5em" class="session">Session name <input id="sessionname" class="selected-font" value="default"/></div>
+			
+			<div class="language">Language <br/>
+			    <select class="dropdown" id="lang_select">
+				<option selected value="sv-SE">sv-SE</option>
+				<option value="en-UK">en-UK</option>
+				<option value="en-US">en-US</option>
+				<option value="da-DK">da-DK</option>
+			    </select>
+			</div>
+		    </div>
+		</div>
+		
 		<div class="audio panel">
 		    <div class="title">Audio</div>
 		    <div class="content">
@@ -42,17 +55,16 @@
 	    
 	    <div class="centerpane">
 		<div class="textpane panel">
-		    <!-- <div class="title">Saved text</div> -->
-		    <div class="content">
+		    <div style="margin-bottom: 20pt">
 			<div class="resizable" id="saved-utts">
 			    <table>
 				<thead>
-				    <tr class="title">
-					<td style="min-width: 400px;">Saved text</td>
-					<td style="style=padding-left: 20px; text-align: right; width: 100%">ID</td>
+				    <tr>
+					<td class="title" style="min-width: 400px;">Saved text</td>
+					<td class="title" style="padding-left: 20px; text-align: right; width: 100%">ID</td>
 				    </tr>
 				</thead>
-				<tbody id="saved-utts-table"></tbody>
+				<tbody id="saved-utts-table" class="content"></tbody>
 			    </table>
 			</div>
 			<textarea class="selected-font" id="current-utt"></textarea>
