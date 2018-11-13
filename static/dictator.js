@@ -642,7 +642,26 @@ function dontClick() {
 	if (c !== null && c.indexOf("nobreak") < 0)
 	    d.style["animation"] =  "spin "+ getRandomInt(4,12) + "s linear infinite";
     }
+    
+    document.getElementById("dontclick").style["display"] = "none";
+    document.getElementById("toldyouso").style["display"] = "";
 }
+
+function toldYouSo() {
+    let divs = document.querySelectorAll("div");
+    for (var i = 1; i < divs.length; i++) {
+	var d = divs[i];
+	var c = d.getAttribute("class")
+	if (c !== null && c.indexOf("nobreak") < 0)
+	    d.style["animation"] =  "";
+    }
+    
+    document.getElementById("dontclick").style["display"] = "";
+    document.getElementById("toldyouso").style["display"] = "none";
+
+}
+
+
 
 const keyCodeEnter = 13;
 const keyCodeSpace = 32;
@@ -714,9 +733,10 @@ function validateSessionName() {
     }
 }
 
-document.getElementById("break_everything").addEventListener("click", function() { breakEverything();})
-document.getElementById("unbreak_everything").addEventListener("click", function() { unbreakEverything();})
+//document.getElementById("break_everything").addEventListener("click", function() { breakEverything();})
+//document.getElementById("unbreak_everything").addEventListener("click", function() { unbreakEverything();})
 document.getElementById("dontclick").addEventListener("click", function() { dontClick();})
+document.getElementById("toldyouso").addEventListener("click", function() { toldYouSo();})
 
 
 document.getElementById("current-utt").addEventListener("keyup", function() { saveOnCtrlEnter();})
