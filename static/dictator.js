@@ -1,7 +1,6 @@
 "use strict";
 
 
-
 // See e.g.:
 // https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API 
 // https://mozdevs.github.io/MediaRecorder-examples/record-live-audio.html
@@ -33,14 +32,12 @@ var isRecording = false;
 
 var filenameBase;
 
-// TODO
-var baseURL = window.origin;
+let baseURL = window.location.protocol + '//' + window.location.host + window.location.pathname.replace(/\/$/g,"");
+//var baseURL = window.origin;
 
 var sendAudio = false;
 
 var abbrevMap = {};
-
-//var audioBlob;
 
 window.onload = function () {
 
@@ -78,10 +75,9 @@ window.onload = function () {
 	    let text = event.results[i][0].transcript.trim();
 	    if (event.results[i].isFinal) {
 
-		// if we have a cache: save current cache and start new recording
 		if (isRecording) {
-		    await stopAndSend();
-		    await recStart();
+		    await stopAndSend("rec auto break");
+		    await recStart("rec auto break");
 		}
 		
 	    	finalResponse.value = text.trim();
@@ -101,6 +97,9 @@ window.onload = function () {
     
     recognition.onend = function() {
 	console.log("recognition.onend");
+	if (isRecording) {
+	    stopAndSend();
+	}
 	enable(recStartButton);
 	disable(recSendButton);
 	disable(recCancelButton);
@@ -108,6 +107,9 @@ window.onload = function () {
     
     recognition.onspeechend = function() {
 	console.log("recognition.onspeechend");
+	if (isRecording) {
+	    stopAndSend();
+	}
     };
     
     recognition.onerror = function(event) {
@@ -146,12 +148,15 @@ window.onload = function () {
         source.connect(visAnalyser);
 	recorder = new MediaRecorder(stream);
 	recorder.onstop = function(evt) {
+	    //console.log("recorder.onstop");
 	    isRecording = false;
 	} 
 	recorder.onstart = function(evt) {
+	    //console.log("recorder.onstart");
 	    isRecording = true;
 	} 
 	recorder.addEventListener('dataavailable', async function (evt) {	    
+	    console.log("recorder dataavailable");
 	    let thisRecStart = new Date(recStartTime).toLocaleString();
 	    recStartTime = null;
 	    document.getElementById("rec_duration").innerHTML = "&nbsp;"; // TODO: called twice, async issue
@@ -390,15 +395,15 @@ function enable(element) {
     element.removeAttribute("disabled","false");
 }
 
-async function recStart() {
+async function recStart(caller) {
+    console.log("recStart() called from " + caller);
     // save working text if unsaved
     let current = document.getElementById("current-utt");
     let text = current.value.trim();
     if (text.length > 0) {
 	await saveUttToList(sessionField.value.trim(), filenameBase, text, true);
 	current.value = "";
-    }	    
-    
+    }    
     filenameBase = newFilenameBase();
     console.log("**** filenameBase set to " + filenameBase);
     enable(saveTextButton);
@@ -409,11 +414,14 @@ async function recStart() {
     recStartTime = new Date().getTime();
     await recorder.start();
     logMessage("info", "Recording started");
+    console.log("recStart() completed call from " + caller);
 }
 
 recStartButton.addEventListener("click", async function() {
-    await recStart();
-    recognition.start();
+    //if (!isRecording) {
+	await recStart("button click");
+	recognition.start();
+    //}
 });
 
 recCancelButton.addEventListener("click", function() {
@@ -426,7 +434,11 @@ recCancelButton.addEventListener("click", function() {
     disable(recCancelButton);
     disable(recSendButton);
     sendAudio = false;
-    recorder.stop();
+    try {
+	recorder.stop();
+    } catch {
+	console.log("couldn't stop recorder (not running)");
+    }
     document.getElementById("rec_duration").innerHTML = "&nbsp;";
     //recStartTime = null;
 });
@@ -434,18 +446,27 @@ recCancelButton.addEventListener("click", function() {
 
 var currentBlobURL = null;
 
-async function stopAndSend() {
+async function stopAndSend(caller) {
+    console.log("stopAndSend() called from " + caller);
     await enable(recStartButton);
     await disable(recCancelButton);
     await disable(recSendButton);
     sendAudio = true;
-    await recorder.stop();
+    try {
+	await recorder.stop();
+    } catch {
+	console.log("couldn't stop recorder (not running)");
+    }
+		 
     document.getElementById("rec_duration").innerHTML = "&nbsp;";
+    console.log("stopAndSend() completed call from " + caller);
 }
 
 recSendButton.addEventListener("click", async function() {    
-    await stopAndSend();
-    recognition.stop();
+    //if (isRecording) {
+	await stopAndSend("button click");
+	recognition.stop();
+    //}
 });
 
 function visualize() {
@@ -506,6 +527,8 @@ function visualize() {
 
 async function soundToServer(payload) {
 
+    console.log("soundToServer", payload);
+    
     //console.log("Här kommer ljud ", payload);
     //if (payload.session_)
     
@@ -664,10 +687,10 @@ const keyCodeSpace = 32;
 const keyCodeEscape = 27;
 
 async function saveUttToList(session, fName, text, isEdited) {
+    console.log("saveUttToList", session, fName, text, isEdited, overwrite);
     var savedDiv = document.getElementById(fName);
     let savedIsUndefined = (savedDiv === undefined || savedDiv === null);
     let overwrite = !savedIsUndefined;
-    console.log("saveUttToList", session, fName, text, isEdited, overwrite);
     if (text.length > 0 && fName !== undefined && fName !== null) {
 	if (await textToServer(session, fName, text, isEdited, overwrite)) {
 	    var saved = document.getElementById("saved-utts");
