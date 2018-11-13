@@ -49,3 +49,21 @@ The `make` command will generate a zip file containing everything needed to run 
 * Google Chrome
 
 
+## Files of the server session folder
+
+### .webm
+
+Sound file in Google Chrome's format. Can be converted into .wav using e.g. `ffmpeg`.
+
+### .json
+
+Metadata file accompanying the .webm file.
+
+### .rec
+
+Text file containing the original recognition result.
+
+### .edi
+
+Text file containing manually edited recognition result. May be identical to the contents of the .rec file.
+
