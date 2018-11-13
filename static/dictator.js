@@ -618,7 +618,10 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
     });
     await f();
 
-    logMessage("info", "saved text '" + text + "'");
+    if (isEdited)
+	logMessage("info", "saved edited text '" + text + "' on server");
+    else
+	logMessage("info", "saved recogniser result '" + text + "' on server");
     return res;
 };
 
