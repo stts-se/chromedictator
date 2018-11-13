@@ -112,9 +112,23 @@
 }
 
 .menu {
+    display: grid;
     grid-column: 1/3;
     grid-row: 2;
+    grid-auto-columns: 1fr 1fr;
 }
+
+.docs {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.links {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: right;
+}
+
 
 
 /* UTILITIES */
