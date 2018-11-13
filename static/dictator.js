@@ -71,6 +71,7 @@ window.onload = function () {
     recognition.interimResults = true;
     
     recognition.onresult = async function(event) {
+	console.log("recognition.onresult");
 	for (var i = event.resultIndex; i < event.results.length; ++i) {
 	    let text = event.results[i][0].transcript.trim();
 	    if (event.results[i].isFinal) {
@@ -94,6 +95,10 @@ window.onload = function () {
 	    }
 	}
     };    
+
+    recognition.onstart = function() {
+	console.log("recognition.onstart");
+    }
     
     recognition.onend = function() {
 	console.log("recognition.onend");
@@ -148,11 +153,11 @@ window.onload = function () {
         source.connect(visAnalyser);
 	recorder = new MediaRecorder(stream);
 	recorder.onstop = function(evt) {
-	    //console.log("recorder.onstop");
+	    console.log("recorder.onstop");
 	    isRecording = false;
 	} 
 	recorder.onstart = function(evt) {
-	    //console.log("recorder.onstart");
+	    console.log("recorder.onstart");
 	    isRecording = true;
 	} 
 	recorder.addEventListener('dataavailable', async function (evt) {	    
@@ -401,7 +406,8 @@ async function recStart(caller) {
     let current = document.getElementById("current-utt");
     let text = current.value.trim();
     if (text.length > 0) {
-	await saveUttToList(sessionField.value.trim(), filenameBase, text, true);
+	let fnb = filenameBase;
+	await saveUttToList(sessionField.value.trim(), fnb, text, true);
 	current.value = "";
     }    
     filenameBase = newFilenameBase();
@@ -687,10 +693,10 @@ const keyCodeSpace = 32;
 const keyCodeEscape = 27;
 
 async function saveUttToList(session, fName, text, isEdited) {
-    console.log("saveUttToList", session, fName, text, isEdited, overwrite);
     var savedDiv = document.getElementById(fName);
     let savedIsUndefined = (savedDiv === undefined || savedDiv === null);
     let overwrite = !savedIsUndefined;
+    console.log("saveUttToList", session, fName, text, isEdited, overwrite);
     if (text.length > 0 && fName !== undefined && fName !== null) {
 	if (await textToServer(session, fName, text, isEdited, overwrite)) {
 	    var saved = document.getElementById("saved-utts");
