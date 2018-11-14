@@ -109,8 +109,8 @@
     border-radius: .50rem;
 }
 
-.resizable {
-    overflow: auto;
+.resizable {    
+    overflow: scroll;
     resize: both;
 }
 

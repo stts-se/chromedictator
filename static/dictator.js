@@ -206,7 +206,8 @@ function initWebkitSpeechRecognition() {
 		if (isRecording) {
 		    sendAudio = true;
 		    recorder.stop();
-		    recorder.start();
+		    recognition.stop();
+		    //recorder.start();
 		}
 		
 	    	finalResponse.value = text.trim();
@@ -618,6 +619,7 @@ async function saveUttToList(session, fName, text, isEdited) {
     let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
     let overwrite = !savedIsUndefined;
     console.log("saveUttToList", session, fName, text, isEdited, overwrite);
+
     if (text.length > 0 && fName !== undefined && fName !== null) {
 	if (await textToServer(session, fName, text, isEdited, overwrite)) {
 	    var saved = document.getElementById("saved-utts-table");
@@ -637,6 +639,7 @@ async function saveUttToList(session, fName, text, isEdited) {
 		tr.appendChild(textSpan);
 		tr.appendChild(idSpan);
 		saved.appendChild(tr);
+		scrollDown(document.getElementById("saved-utts"));
 	    }
 	    textSpan.textContent = text;
 	}
@@ -719,6 +722,10 @@ saveTextButton.addEventListener("click", function() { saveEditedText() });
 
 // ------------------
 // UTILS
+
+function scrollDown(element) {
+    element.scrollTop = element.scrollHeight;
+}
 
 function logMessage(title, text) {
     console.log(title, text);
