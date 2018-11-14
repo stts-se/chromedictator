@@ -339,6 +339,16 @@ func prettyMarshal(thing interface{}) ([]byte, error) {
 	return res, nil
 }
 
+func saveBackupCopy(filePath string, fileContent []byte) (string, error) {
+	newFilePath := filePath + ".BAK"
+	err := ioutil.WriteFile(newFilePath, fileContent, 0644)
+	if err != nil {
+		return newFilePath, fmt.Errorf("failed to create backup file '%s' : %v", newFilePath, err)
+	}
+	fmt.Printf("Server saved %s\n", newFilePath)
+	return newFilePath, nil
+}
+
 func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 	var respMessages []string
 
@@ -399,20 +409,27 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 		respMessages = append(respMessages, msg)
 	}
 
+	textBytes := []byte(to.Data + "\n")
+
 	if _, err := os.Stat(textFilePath); !os.IsNotExist(err) {
 		if !to.OverWrite {
 			msg := fmt.Sprintf("file with the same session ID and file name already exists: %s/%s.%s\nTo overwrite set over_write:true", to.SessionID, to.FileName, ext)
+			newName, err := saveBackupCopy(textFilePath, textBytes)
+			if err != nil {
+				msg = fmt.Sprintf("%s\nCouldn't save backup file : %v", msg, err)
+			} else {
+				msg = fmt.Sprintf("%s\nSaved backup file %s", msg, newName)
+			}
 
 			log.Println(msg)
 			http.Error(w, msg, http.StatusBadRequest)
 			return
-		} else {
-			msg := fmt.Sprintf("overwriting existing file '%s/%s.%s'", to.SessionID, to.FileName, ext)
-			respMessages = append(respMessages, msg)
 		}
+		msg := fmt.Sprintf("overwriting existing file '%s/%s.%s'", to.SessionID, to.FileName, ext)
+		respMessages = append(respMessages, msg)
 	}
 
-	err = ioutil.WriteFile(textFilePath, []byte(to.Data+"\n"), 0644)
+	err = ioutil.WriteFile(textFilePath, textBytes, 0644)
 	if err != nil {
 		msg := fmt.Sprintf("failed to create file '%s' : %v", textFilePath, err)
 		log.Println(msg)
@@ -439,33 +456,32 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 }
 
 func writeJSON(jsonFilePath string, jsonObj audioJSON, overwrite bool) ([]string, error) {
-	//fmt.Printf("ANKEBORG\t%v\n", jsonObj)
 	respMessages := []string{}
+	jsonPretty, err := prettyMarshal(jsonObj)
 	if _, err := os.Stat(jsonFilePath); !os.IsNotExist(err) {
 		if overwrite {
 			msg := fmt.Sprintf("file with the same session ID and file name already exists: %s\nTo overwrite set over_write:true", jsonFilePath)
+			newName, err := saveBackupCopy(jsonFilePath, jsonPretty)
+			if err != nil {
+				msg = fmt.Sprintf("%s\nCouldn't save backup file : %v", msg, err)
+			} else {
+				msg = fmt.Sprintf("%s\nSaved backup file %s", msg, newName)
+			}
 
-			//http.Error(w, msg, http.StatusBadRequest)
-			//return
 			return respMessages, fmt.Errorf("%s", msg)
-		} else {
-			msg := fmt.Sprintf("overwriting existing file '%s'", jsonFilePath)
-			respMessages = append(respMessages, msg)
 		}
+		msg := fmt.Sprintf("overwriting existing file '%s'", jsonFilePath)
+		respMessages = append(respMessages, msg)
+
 	}
-	jsonPretty, err := prettyMarshal(jsonObj)
 	if err != nil {
 		msg := fmt.Sprintf("failed to marshal response struct to JSON : %v", err)
-		// http.Error(w, msg, http.StatusInternalServerError)
-		// return
 		return respMessages, fmt.Errorf("%s", msg)
 	}
 	err = ioutil.WriteFile(jsonFilePath, jsonPretty, 0644)
 	if err != nil {
 		msg := fmt.Sprintf("failed to save json file '%s' : %v", jsonFilePath, err)
 		return respMessages, fmt.Errorf("%s", msg)
-		// http.Error(w, msg, http.StatusInternalServerError)
-		// return
 	}
 	fmt.Printf("Server saved %s\n", jsonFilePath)
 	return respMessages, nil
@@ -566,14 +582,19 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat(audioFilePath); !os.IsNotExist(err) {
 		if !ao.OverWrite {
 			msg := fmt.Sprintf("file with the same session ID and file name already exists: %s/%s.%s\nTo overwrite set over_write:true", ao.SessionID, ao.FileName, ao.FileExtension)
+			newName, err := saveBackupCopy(audioFilePath, audio)
+			if err != nil {
+				msg = fmt.Sprintf("%s\nCouldn't save backup file : %v", msg, err)
+			} else {
+				msg = fmt.Sprintf("%s\nSaved backup file %s", msg, newName)
+			}
 
 			log.Println(msg)
 			http.Error(w, msg, http.StatusBadRequest)
 			return
-		} else {
-			msg := fmt.Sprintf("overwriting existing file '%s/%s.%s'", ao.SessionID, ao.FileName, ao.FileExtension)
-			respMessages = append(respMessages, msg)
 		}
+		msg := fmt.Sprintf("overwriting existing file '%s/%s.%s'", ao.SessionID, ao.FileName, ao.FileExtension)
+		respMessages = append(respMessages, msg)
 	}
 	err = ioutil.WriteFile(audioFilePath, audio, 0644)
 	if err != nil {
