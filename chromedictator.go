@@ -18,12 +18,54 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/stts-se/rec"
 )
 
 // TODO Hardwired GOB file should be changed to text file
 var abbrevFilePath = "abbrevs.gob"
 var abbrevs = make(map[string]string)
 var abbrevMutex = &sync.RWMutex{}
+
+// Abbrev is a tuple holding an abbreviation and its expansion.
+type Abbrev struct {
+	Abbrev    string `json:"abbrev"`
+	Expansion string `json:"expansion"`
+}
+
+// TextObject holds values that can be used to produce a text file
+type TextObject struct {
+	SessionID string `json:"session_id"`
+	FileName  string `json:"file_name"`
+	Data      string `json:"data"`
+	OverWrite bool   `json:"over_write"`
+}
+
+// audioJSON holds values that can be used to produce a json file with a recording's metadata
+type audioJSON struct {
+	SessionID string `json:"session_id"`
+	//FileName  string `json:"file_name"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
+// AudioObject holds values that can be used to produce an audio file
+type AudioObject struct {
+	TextObject
+	StartTime     string `json:"start_time"`
+	EndTime       string `json:"end_time"`
+	FileExtension string `json:"file_extension"`
+}
+
+// RequestResponse is used to marshal into JSON and return as a response to an HTTP request
+type RequestResponse struct {
+	Message string `json:"message"`
+}
+
+type audioResponse struct {
+	FileType string `json:"file_type"`
+	Data     string `json:"data"`
+	Message  string `json:"message"`
+}
 
 func persistAbbrevs() error {
 	return map2GobFile(abbrevs, abbrevFilePath)
@@ -68,12 +110,6 @@ func gobFile2Map(fName string) (map[string]string, error) {
 	}
 
 	return m, nil
-}
-
-// Abbrev is a tuple holding an abbreviation and its expansion.
-type Abbrev struct {
-	Abbrev    string `json:"abbrev"`
-	Expansion string `json:"expansion"`
 }
 
 func listSessions(w http.ResponseWriter, r *http.Request) {
@@ -249,14 +285,6 @@ func deleteAbbrev(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "deleted abbbreviation '%s'\n", abbrev)
 }
 
-// TextObject holds values that can be used to produce a text file
-type TextObject struct {
-	SessionID string `json:"session_id"`
-	FileName  string `json:"file_name"`
-	Data      string `json:"data"`
-	OverWrite bool   `json:"over_write"`
-}
-
 func (ao TextObject) validate() []string {
 	var res []string
 
@@ -274,22 +302,6 @@ func (ao TextObject) validate() []string {
 	return res
 }
 
-// audioJSON holds values that can be used to produce a json file with a recording's metadata
-type audioJSON struct {
-	SessionID string `json:"session_id"`
-	//FileName  string `json:"file_name"`
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
-}
-
-// AudioObject holds values that can be used to produce an audio file
-type AudioObject struct {
-	TextObject
-	StartTime     string `json:"start_time"`
-	EndTime       string `json:"end_time"`
-	FileExtension string `json:"file_extension"`
-}
-
 func (ao AudioObject) validate() []string {
 	res := ao.TextObject.validate()
 	if ao.FileExtension == "" {
@@ -302,11 +314,6 @@ func (ao AudioObject) validate() []string {
 		res = append(res, "missing end_time")
 	}
 	return res
-}
-
-// RequestResponse is used to marshal into JSON and return as a response to an HTTP request
-type RequestResponse struct {
-	Message string `json:"message"`
 }
 
 // Let's lock everything when writing a file
@@ -337,6 +344,71 @@ func prettyMarshal(thing interface{}) ([]byte, error) {
 	tmp := string(res) + "\n"
 	res = []byte(tmp)
 	return res, nil
+}
+
+func mimeType(fName string) string {
+	ext := strings.TrimPrefix(filepath.Ext(fName), ".")
+	if ext == "mp3" {
+		return "audio/mpeg"
+	}
+	if ext == "" {
+		return ""
+	}
+	return fmt.Sprintf("audio/%s", ext)
+}
+
+func getAudio(w http.ResponseWriter, r *http.Request) {
+	var res audioResponse
+	vars := mux.Vars(r)
+	session := vars["session"]
+	fileName := vars["filename"]
+	if fileName == "" {
+		msg := "get_audio: missing param 'filename'"
+		log.Print(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+
+	}
+	if session == "" {
+		msg := "get_audio: missing param 'session'"
+		log.Print(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+
+	}
+
+	fullPath := filepath.Join(baseDir, session, fileName)
+	ext := filepath.Ext(fullPath)
+	if ext == "" {
+		fullPath = fmt.Sprintf("%s.%s", fullPath, "webm")
+	}
+
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		res.Message = fmt.Sprintf("no such file: %s", fileName)
+	} else {
+		bytes, err := ioutil.ReadFile(fullPath)
+		if err != nil {
+			msg := fmt.Sprintf("get_audio: failed to read audio file : %v", err)
+			log.Print(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+
+		res.FileType = mimeType(fullPath)
+		data := base64.StdEncoding.EncodeToString(bytes)
+		res.Data = data
+	}
+
+	resJSON, err := rec.PrettyMarshal(res)
+	if err != nil {
+		msg := fmt.Sprintf("get_audio: failed to create JSON from struct : %v", res)
+		log.Print(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "%s\n", string(resJSON))
 }
 
 func saveBackupCopy(filePath string, fileContent []byte) (string, error) {
@@ -671,6 +743,7 @@ func main() {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
+	r.HandleFunc("/get_audio/{session}/{filename}", getAudio).Methods("GET")
 	r.HandleFunc("/save_audio", saveAudio).Methods("POST")
 	r.HandleFunc("/save_recogniser_text", saveRecogniserText).Methods("POST")
 	r.HandleFunc("/save_edited_text", saveEditedText).Methods("POST")
