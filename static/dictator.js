@@ -644,6 +644,7 @@ async function saveUttToList(session, fName, text, isEdited) {
 		let audio = document.createElement("audio");
 		audio.src = baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName;
 		audioSpan.innerHTML  = "<button class='btn icon black replay'>&#9654;</button>";
+		audioSpan.style = "vertical-align: top";
 		audioSpan.title = "Play audio";
 		audioSpan.addEventListener("click", function () { audio.play(); });
 		getAudio(audio);
