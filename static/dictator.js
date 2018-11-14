@@ -53,7 +53,7 @@ window.onload = function () {
 	sessionField.value = session.trim();
     }
     validateSessionName();
-    
+
     disable(recCancelButton);
     disable(recSendButton);
     disable(saveTextButton);
@@ -67,8 +67,13 @@ window.onload = function () {
     
     document.getElementById("current-utt").focus();
 
-    // insert dummy text/audio
-    readFromServerAndAddToUttList(sessionField.value.trim(), "audiotst");
+    var loadFromServer = url.searchParams.get('load_from_server')
+    if (loadFromServer != null && loadFromServer != "" && loadFromServer === "true") {
+	document.getElementById("load_saved_text").click();	
+    } else {
+	// insert dummy text/audio
+	readFromServerAndAddToUttList(sessionField.value.trim(), "audiotst");
+    }
 }
 
 window.onbeforeunload = function() {
@@ -898,18 +903,30 @@ async function listBasenames(sessionName) {
     return names;
 }
 
+async function listFiles(sessionName) {
+    let url = baseURL + "/admin/list/files/" + sessionName;
+    let names = await fetch(url).then(r => r.json());    
+    return names;
+}
+
 document.getElementById("load_saved_text").addEventListener("click", async function() {
     document.getElementById("saved-utts-table").textContent="";
     let sessionName = sessionField.value.trim();
-    let names = await listBasenames(sessionName);
+    let names = await listFiles(sessionName);
+    let nLoaded = 0;
     for (var i=0; i<names.length; i++) {
 	let fName = names[i];
-	await readFromServerAndAddToUttList(sessionName, fName);
+	if (fName.endsWith(".json")) {
+	    nLoaded ++;
+	    let baseName = fName.replace(/[.]json$/,"");
+	    console.log(baseName);
+	    await readFromServerAndAddToUttList(sessionName, baseName);
+	}
     }
     let utts = "utterance";
-    if (names.length > 1)
+    if (nLoaded > 1)
 	utts = utts + "s";
-    logMessage("info", "Loaded " + names.length + " " + utts + " from server");
+    logMessage("info", "Loaded " + nLoaded + " " + utts + " from server");
 });
 
 
