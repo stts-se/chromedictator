@@ -68,7 +68,7 @@ window.onload = function () {
     document.getElementById("current-utt").focus();
 
     // insert dummy text/audio
-    saveUttToList(sessionField.value.trim(), renewFilenameBase(), "testing testing", false);
+    // saveUttToList(sessionField.value.trim(), renewFilenameBase(), "testing testing", false);
 }
 
 window.onbeforeunload = function() {
@@ -99,6 +99,9 @@ function initMediaAccess() {
 	recorder.onerror = function(evt) {
 	    console.log("recorder.onerror");
 	}
+	recorder.onpause = function(evt) {
+	    console.log("recorder.onpause");
+	}
 	recorder.onstart = async function(evt) {
 	    console.log("recorder.onstart called");
 	    // save working text if unsaved
@@ -119,6 +122,7 @@ function initMediaAccess() {
 	    recStartTime = new Date().getTime();
 	    isRecording = true;
 	    console.log("recorder.onstart completed");
+	    logMessage("info", "Recording started");
 	} 
 	recorder.ondataavailable = async function (evt) {	    
 	    let thisRecStart = new Date(recStartTime).toLocaleString();
@@ -229,6 +233,11 @@ function initWebkitSpeechRecognition() {
 	}
     };    
 
+    recognition.onnnomatch = function() {
+	console.log("recognition.onnomatch");
+    }
+    
+
     recognition.onstart = function() {
 	console.log("recognition.onstart");
 	if (!isRecording) {
@@ -240,6 +249,24 @@ function initWebkitSpeechRecognition() {
     
     recognition.onend = function() {
 	console.log("recognition.onend");
+	if (isRecording) {
+	    try {
+		recorder.stop();
+	    } catch {}
+	}
+    };
+
+    recognition.onsoundstart = function() {
+	console.log("recognition.onsoundstart");
+	if (!isRecording) {
+	    try {
+		recorder.start();
+	    } catch {}
+	}
+    }
+    
+    recognition.onsoundend = function() {
+	console.log("recognition.onsoundend");
 	if (isRecording) {
 	    try {
 		recorder.stop();
