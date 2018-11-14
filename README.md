@@ -48,6 +48,10 @@ The `make` command will generate a zip file containing everything needed to run 
 3. Start Google Chrome and visit http://localhost:7654
 
 
+## Record from playback
+
+https://unix.stackexchange.com/questions/130774/creating-a-virtual-microphone/153528#153528
+
 ## Requirements
 
 
