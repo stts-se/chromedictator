@@ -2,6 +2,7 @@
 
 https://github.com/stts-se/chromedictator
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/stts-se/chromedictator)](https://goreportcard.com/report/github.com/stts-se/chromedictator)
 
 ## Build and run from source
 
