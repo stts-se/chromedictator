@@ -640,6 +640,7 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
     return res;
 };
 
+// read text from server, and add to 'saved text' area with cached audio 
 async function readFromServerAndAddToUttList(session, fName) {
     var text = await getEditedText(session, fName);
     if (text !== "") {
@@ -647,6 +648,7 @@ async function readFromServerAndAddToUttList(session, fName) {
     }
 }
 
+// save text on server, and add to 'saved text' area with cached audio 
 async function saveAndAddToUttList(session, fName, text, isEdited) {
     var savedSpan = document.getElementById(fName);
     let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
@@ -660,6 +662,7 @@ async function saveAndAddToUttList(session, fName, text, isEdited) {
     }
 }
 
+// add to 'saved text' area with cached audio 
 async function addToUttList(session, fName, text) {
     var savedSpan = document.getElementById(fName);
     let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
@@ -756,6 +759,7 @@ async function getText(sessionName, fName, extension) {
 		    logMessage("error", "couldn't get text from server : " + json.message);
 		} else {
 		    res = json.text;
+		    console.log(json);
 		}
 	    } catch (err) {
 	    	logMessage("error", err.message);
@@ -886,6 +890,26 @@ saveTextButton.addEventListener("click", function() { saveEditedText() });
 document.getElementById("clear_saved_text").addEventListener("click", function() {
     document.getElementById("saved-utts-table").textContent="";
     logMessage("info", "Cleared text view");
+});
+
+async function listBasenames(sessionName) {
+    let url = baseURL + "/admin/list/basenames/" + sessionName;
+    let names = await fetch(url).then(r => r.json());    
+    return names;
+}
+
+document.getElementById("load_saved_text").addEventListener("click", async function() {
+    document.getElementById("saved-utts-table").textContent="";
+    let sessionName = sessionField.value.trim();
+    let names = await listBasenames(sessionName);
+    for (var i=0; i<names.length; i++) {
+	let fName = names[i];
+	await readFromServerAndAddToUttList(sessionName, fName);
+    }
+    let utts = "utterance";
+    if (names.length > 1)
+	utts = utts + "s";
+    logMessage("info", "Loaded " + names.length + " " + utts + " from server");
 });
 
 

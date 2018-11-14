@@ -62,12 +62,14 @@ type RequestResponse struct {
 }
 
 type audioResponse struct {
+	audioJSON
 	FileType string `json:"file_type"`
 	Data     string `json:"data"`
 	Message  string `json:"message"`
 }
 
 type textResponse struct {
+	audioJSON
 	FileType string `json:"file_type"`
 	Text     string `json:"text"`
 	Message  string `json:"message"`
@@ -183,6 +185,12 @@ func listFiles(dir string) ([]string, error) {
 	}
 	for _, f := range files {
 		fName := f.Name()
+		if strings.HasSuffix(fName, ".BAK") {
+			continue
+		}
+		if strings.HasSuffix(fName, "~") {
+			continue
+		}
 		res = append(res, fName)
 	}
 	sort.Slice(res, func(i, j int) bool { return res[i] < res[j] })
@@ -369,6 +377,23 @@ func getRecogniserText(w http.ResponseWriter, r *http.Request) {
 	getText(w, r, "rec")
 }
 
+func readJSONFile(fileName string) (audioJSON, error) {
+	res := audioJSON{}
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		return res, fmt.Errorf("no such file: %s", fileName)
+	}
+	bytes, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return res, err
+	}
+	err = json.Unmarshal(bytes, &res)
+	if err != nil {
+		return res, fmt.Errorf("couldn't unmarshal JSON : %v", err)
+	}
+
+	return res, nil
+}
+
 func getText(w http.ResponseWriter, r *http.Request, defaultExt string) {
 	var res textResponse
 	vars := mux.Vars(r)
@@ -406,8 +431,20 @@ func getText(w http.ResponseWriter, r *http.Request, defaultExt string) {
 		}
 
 		res.FileType = mimeType(fullPath)
-		res.Text = string(bytes)
+		res.Text = strings.TrimSpace(string(bytes))
 	}
+	basename := strings.TrimSuffix(fullPath, filepath.Ext(fullPath))
+	jsonFile := basename + ".json"
+
+	audioJSON, err := readJSONFile(jsonFile)
+	if err != nil {
+		msg := fmt.Sprintf("get_text: failed to read json file : %v", err)
+		log.Print(msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+
+	res.audioJSON = audioJSON
 
 	resJSON, err := rec.PrettyMarshal(res)
 	if err != nil {
