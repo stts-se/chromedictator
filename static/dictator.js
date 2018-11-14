@@ -772,9 +772,9 @@ document.getElementById("current-utt").addEventListener("keyup", function() { tr
 document.getElementById("current-utt").addEventListener("changed", function() { trackTextChanges() });
 
 document.getElementById("current-utt").addEventListener("keyup", function() {
-        if (event.ctrlKey && event.keyCode === keyCodeEnter) {
-	saveTextButton.click();
-	}
+    if (event.ctrlKey && event.keyCode === keyCodeEnter) {
+	    saveTextButton.click();
+    }
 });
 
 saveTextButton.addEventListener("click", function() { saveEditedText() });
@@ -844,10 +844,12 @@ function renewFilenameBase() {
 }
 
 function globalKeyListener() {
+    //console.log("keycode debug", event.keyCode, event.ctrlKey);
     if (event.keyCode === keyCodeEscape && !recCancelButton.disabled) {
 	recCancelButton.click();
     }
-    if (event.ctrlKey && event.keyCode === keyCodeSpace) {
+    if (// event.keyCode === keyCodeEnter || 
+	event.ctrlKey && event.keyCode === keyCodeSpace) {
 	if (!recSendButton.disabled)
 	    recSendButton.click();
 	else if  (!recStartButton.disabled) {
