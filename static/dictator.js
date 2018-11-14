@@ -66,6 +66,9 @@ window.onload = function () {
     initMediaAccess();
     
     document.getElementById("current-utt").focus();
+
+    // insert dummy audio
+    // saveUttToList(sessionField.value.trim(), renewFilenameBase(), "testing testing", false);
 }
 
 window.onbeforeunload = function() {
@@ -197,6 +200,7 @@ function initWebkitSpeechRecognition() {
     
     // on result from speech rec
     recognition.onresult = async function(event) {
+	console.log("recognition.onresult");
 	for (var i = event.resultIndex; i < event.results.length; ++i) {
 	    let text = event.results[i][0].transcript.trim();
 	    if (event.results[i].isFinal) {
@@ -220,7 +224,7 @@ function initWebkitSpeechRecognition() {
 		
 				
 	    } else {
-		tempResponse.innerHTML = event.results[i][0].transcript;
+		tempResponse.innerHTML = event.results[i][0].transcript.trim();
 	    }
 	}
     };    
@@ -619,7 +623,7 @@ async function saveUttToList(session, fName, text, isEdited) {
     let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
     let overwrite = !savedIsUndefined;
     console.log("saveUttToList", session, fName, text, isEdited, overwrite);
-
+    
     if (text.length > 0 && fName !== undefined && fName !== null) {
 	if (await textToServer(session, fName, text, isEdited, overwrite)) {
 	    var saved = document.getElementById("saved-utts-table");
@@ -627,18 +631,27 @@ async function saveUttToList(session, fName, text, isEdited) {
 	    if (overwrite) {
 		textSpan = savedSpan;
 	    } else {
-		let tr = document.createElement("tr");
-		tr.setAttribute("class","highlightonhover");
-		tr.setAttribute("title",filenameBase);
-		textSpan = document.createElement("td")
-		textSpan.id = filenameBase;
-		textSpan.setAttribute("style","padding-left: 1em;");
-		let idSpan = document.createElement("td");
-		idSpan.textContent = shortFilenameBase();
-		idSpan.setAttribute("style","vertical-align: top; text-align: right; font-family: monospace; padding-right: 1em");
-		tr.appendChild(textSpan);
-		tr.appendChild(idSpan);
-		saved.appendChild(tr);
+		let div = document.createElement("div");
+		div.setAttribute("class","highlightonhover");
+		div.setAttribute("title",filenameBase);
+		textSpan = document.createElement("span")
+		textSpan.id = fName;
+		textSpan.setAttribute("style","padding-left: 0.5em;");
+		let idSpan = document.createElement("span");
+		idSpan.textContent = shortFilenameBaseFor(fName);
+		idSpan.setAttribute("style","vertical-align: top; float: right; text-align: right; font-family: monospace");
+		let audioSpan = document.createElement("span");
+		let audio = document.createElement("audio");
+		audio.src = baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName;
+		audioSpan.innerHTML  = "<button class='btn icon black replay'>&#9654;</button>";
+		audioSpan.title = "Play audio";
+		audioSpan.addEventListener("click", function () { audio.play(); });
+		getAudio(audio);
+		div.appendChild(audioSpan);
+		audioSpan.appendChild(audio);
+		div.appendChild(textSpan);
+		div.appendChild(idSpan);
+		saved.appendChild(div);
 		scrollDown(document.getElementById("saved-utts"));
 	    }
 	    textSpan.textContent = text;
@@ -655,6 +668,54 @@ function saveEditedText() {
 
 // -------------------
 // MISC
+
+function getAudio(audio) {
+
+    //let url = baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName;
+    let url = audio.src;
+    
+    (async () => {
+	
+	const resp = await fetch(url, {
+	});
+	
+	if (resp.ok) {
+	    const content = await resp.text();
+	    //console.log(content);
+	    try {
+		const json = JSON.parse(content);
+		if (json.data === undefined || json.data === null || json.data === "" ) {
+		    logMessage("error", "couldn't get audio from server : " + json.message);
+		} else {
+
+		    //console.log("resp.data", json.data);
+
+    		    // https://stackoverflow.com/questions/16245767/creating-a-blob-from-a-base64-string-in-javascript#16245768
+    		    let byteCharacters = atob(json.data);
+		    
+    		    var byteNumbers = new Array(byteCharacters.length);
+    		    for (var i = 0; i < byteCharacters.length; i++) {
+    			byteNumbers[i] = byteCharacters.charCodeAt(i);
+    		    }
+    		    var byteArray = new Uint8Array(byteNumbers);
+		    
+    		    let blob = new Blob([byteArray], {'type' : json.file_type});
+    		    audio.src = URL.createObjectURL(blob);
+		    
+		}
+	    } catch (err) {
+		console.log(err.stack);
+	    	logMessage("error", err.message);
+	    }
+	} else {
+	    console.log(resp);
+	    logMessage("error", "couldn't get audio from server : " + resp.statusText);
+	}
+
+	
+    })();
+
+}
 
 function validateSessionName() {
     if (sessionField.value.trim().length > 0) {
@@ -720,6 +781,7 @@ saveTextButton.addEventListener("click", function() { saveEditedText() });
 
 document.getElementById("clear_saved_text").addEventListener("click", function() {
     document.getElementById("saved-utts-table").textContent="";
+    logMessage("info", "Cleared text view");
 });
 
 
@@ -732,7 +794,12 @@ function scrollDown(element) {
 }
 
 function logMessage(title, text) {
-    console.log(title, text);
+    if (title === "info") {
+	console.log(title, text);
+    } else {	
+	var stack = new Error().stack;
+	console.log(title, text, stack);
+    }
     document.getElementById("messages").textContent = title + ": " + text;    
 }
 
@@ -763,12 +830,17 @@ function getRandomInt(min, max) {
 }
 
 function shortFilenameBase() {
-    return filenameBase.substring(0,8);
+    shortFilenameBaseFor(filenameBase);
+}
+
+function shortFilenameBaseFor(fName) {
+    return fName.substring(0,8);
 }
 
 function renewFilenameBase() {
     filenameBase = uuidv4();
     console.log("**** filenameBase set to " + filenameBase);
+    return filenameBase;
 }
 
 function globalKeyListener() {

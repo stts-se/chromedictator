@@ -96,12 +96,26 @@
     color: white;
 }
 
+.btn.black:hover:not(:disabled) {
+    background: black;
+    color: white;
+}
+
+.btn.delete:hover:not(:disabled) {
+    background: red;
+    color: white;
+}
+
 .icon {
     border: none;
 }
 
 .delete {
     color: red;
+}
+
+.black {
+    color: black;
 }
 
 .highlightonhover:hover {
