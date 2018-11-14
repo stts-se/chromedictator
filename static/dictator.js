@@ -782,7 +782,7 @@ function trackTextChanges() {
     if (savedSpan !== undefined && savedSpan !== null)
 	savedText = savedSpan.textContent.trim();
     let textChanged = (savedText != text);
-    if (textChanged) 
+    if (textChanged && filenameBase !== null) 
 	enable(saveTextButton);
     else
      	disable(saveTextButton);
@@ -799,6 +799,7 @@ recCancelButton.addEventListener("click", function() {
     sendAudio = false;
     recognition.abort();
     recorder.stop("cancel");
+    trackTextChanges();
 });
 
 
