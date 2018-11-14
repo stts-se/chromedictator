@@ -96,6 +96,14 @@
     color: white;
 }
 
+.icon {
+    border: none;
+}
+
+.delete {
+    color: red;
+}
+
 .highlightonhover:hover {
     color: grey;
 }

@@ -718,6 +718,10 @@ document.getElementById("current-utt").addEventListener("keyup", function() {
 
 saveTextButton.addEventListener("click", function() { saveEditedText() });
 
+document.getElementById("clear_saved_text").addEventListener("click", function() {
+    document.getElementById("saved-utts-table").textContent="";
+});
+
 
 
 // ------------------
