@@ -1,9 +1,9 @@
 chromedictator: chromedictator.go static/*css static/*html static/*js static/*ico static/*png README.md
-	go build
-	GOOS=darwin GOARCH=amd64 go build -o chromedict_mac
-	GOOS=windows GOARCH=amd64 go build -o chromedict_win.exe
-	zip chromedictator.zip chromedictator chromedict_mac chromedict_win.exe static/*css static/*html static/*js static/*ico static/*png README.md
+	@go build
+	@GOOS=darwin GOARCH=amd64 go build -o chromedict_mac
+	@GOOS=windows GOARCH=amd64 go build -o chromedict_win.exe
+	@zip -q chromedictator.zip chromedictator chromedict_mac chromedict_win.exe static/*css static/*html static/*js static/*ico static/*png README.md
 
 
 clean:
-	rm -f chromedictator chromedict_mac chromedict_win.exe chromedictator.zip
+	@rm -f chromedictator chromedict_mac chromedict_win.exe chromedictator.zip
