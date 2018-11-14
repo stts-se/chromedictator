@@ -56,21 +56,23 @@
 	    <div class="centerpane">
 		<div class="textpane panel">
 		    <div style="margin-bottom: 20px">
-			<div style="padding-right: 1em" id="saved-utts">
-			    <span class="title">Saved text
-				<button id="clear_saved_text" class="btn icon" title="Clear text view">&#x2612;</button>
+			
+			<div style="vertical-align: middle; padding-right: 1em" id="saved-utts">
+			    <span style="vertical-align: middle" class="title">Saved text
+				<button style="vertial-align: middle; padding: 0.5pt 0 0 0" id="clear_saved_text" class="btn icon red" title="Clear text view">&#x2612;</button>
 			    </span>
-			    <span style="float: right; padding-right: 1em" class="title">ID</span>
+			    <span style="vertical-align: middle; float: right; padding-right: 2em" class="title">ID</span>
 			    <div id="saved-utts-table" style="height: 300px; margin-top: 1em; margin-left: 1em; padding-right: 1em" class="content resizable">
 			    </div>
 			</div>
+
+			<div id="recognition-result">
+			    <div class="title">Recognition result</div>
+			    <div class="content">(empty)</div>
+			</div>
+
 			<textarea style="margin-left: 1em;" class="selected-font" id="current-utt"></textarea><br/>
 			<button style="margin-left: 1em;" id="save_edited_text" title="Ctrl-Enter" class="btn">Save text</button>
-		    </div>
-		    
-		    <div id="recognition-result">
-			<div class="title">Recognition result</div>
-			<div class="content">(empty)</div>
 		    </div>
 		</div>
 

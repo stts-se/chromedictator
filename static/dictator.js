@@ -59,7 +59,7 @@ window.onload = function () {
     disable(saveTextButton);
     disable(document.getElementById("current-utt"));
 
-    initAbbrevs();
+    loadAbbrevTable();
     populateShortcuts();
 
     initWebkitSpeechRecognition();
@@ -67,8 +67,8 @@ window.onload = function () {
     
     document.getElementById("current-utt").focus();
 
-    // insert dummy audio
-    // saveUttToList(sessionField.value.trim(), renewFilenameBase(), "testing testing", false);
+    // insert dummy text/audio
+    saveUttToList(sessionField.value.trim(), renewFilenameBase(), "testing testing", false);
 }
 
 window.onbeforeunload = function() {
@@ -292,10 +292,6 @@ function initWebkitSpeechRecognition() {
     };
 
     
-}
-
-function initAbbrevs() {
-    loadAbbrevTable();
 }
 
 function populateShortcuts() {
@@ -642,12 +638,28 @@ async function saveUttToList(session, fName, text, isEdited) {
 		idSpan.setAttribute("style","vertical-align: top; float: right; text-align: right; font-family: monospace");
 		let audioSpan = document.createElement("span");
 		let audio = document.createElement("audio");
-		audio.src = baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName;
-		audioSpan.innerHTML  = "<button class='btn icon black replay'>&#9654;</button>";
-		audioSpan.style = "vertical-align: top";
-		audioSpan.title = "Play audio";
-		audioSpan.addEventListener("click", function () { audio.play(); });
-		getAudio(audio);
+		let play = "&#9654;";
+		let pause = "&#9646;&#9646;";
+		audioSpan.innerHTML  = "<button style='width: 30px; text-align: center' class='btn black replay'>" + play + "</button>";
+		let playChar = audioSpan.firstChild.innerHTML;
+		audioSpan.style = "vertical-align: top; text-align: center";
+		audioSpan.title = "Play";
+		audioSpan.addEventListener("click", function () {
+		    if (audioSpan.firstChild.innerText === playChar) {
+			audio.play();
+			audioSpan.firstChild.innerHTML = pause;
+			audioSpan.title = "Pause";
+		    } else {
+			audio.pause();
+			audioSpan.firstChild.innerHTML = play;
+			audioSpan.title = "Play";
+		    }
+		});
+		audio.onended = function() {
+		    audioSpan.firstChild.innerHTML = play;
+		    audioSpan.title = "Play";
+		};
+		cacheAudio(audio, audioSpan.firstChild, baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName);
 		div.appendChild(audioSpan);
 		audioSpan.appendChild(audio);
 		div.appendChild(textSpan);
@@ -670,11 +682,12 @@ function saveEditedText() {
 // -------------------
 // MISC
 
-function getAudio(audio) {
+// cache audio for playback (fetch from server)
+function cacheAudio(audioElement, playPauseButton, url) {
 
     //let url = baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName;
-    let url = audio.src;
-    
+    //let url = audio.src;
+
     (async () => {
 	
 	const resp = await fetch(url, {
@@ -686,6 +699,9 @@ function getAudio(audio) {
 	    try {
 		const json = JSON.parse(content);
 		if (json.data === undefined || json.data === null || json.data === "" ) {
+		    audioElement.setAttribute("disabled","disabled");
+		    playPauseButton.setAttribute("disabled","disabled");
+		    playPauseButton.setAttribute("title","No audio");
 		    logMessage("error", "couldn't get audio from server : " + json.message);
 		} else {
 
@@ -701,11 +717,13 @@ function getAudio(audio) {
     		    var byteArray = new Uint8Array(byteNumbers);
 		    
     		    let blob = new Blob([byteArray], {'type' : json.file_type});
-    		    audio.src = URL.createObjectURL(blob);
+    		    audioElement.src = URL.createObjectURL(blob);
 		    
 		}
 	    } catch (err) {
-		console.log(err.stack);
+		audioElement.setAttribute("disabled","disabled");
+		playPauseButton.setAttribute("disabled","disabled");
+		playPauseButton.setAttribute("title","No audio");
 	    	logMessage("error", err.message);
 	    }
 	} else {

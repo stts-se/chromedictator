@@ -62,10 +62,24 @@
 }
 
 #current-utt {
-    margin-top: 2em;
+    /* margin-top: 2em; */
     width: 95%;
     padding: 0.5em;
     min-height: 200px;
+}
+
+#recognition-result {
+    margin-top: 1em;
+    /* width: 95%;
+       padding: 0.5em;
+       min-height: 200px; */
+}
+
+#recognition-result .content {
+    padding-top: 0.5em;
+    /* width: 95%;
+       padding: 0.5em;
+       min-height: 200px; */
 }
 
 #saved-utts {
