@@ -68,7 +68,7 @@ window.onload = function () {
     document.getElementById("current-utt").focus();
 
     // insert dummy text/audio
-    saveUttToList(sessionField.value.trim(), "audio-test", "", false, true);
+    readFromServerAndAddToUttList(sessionField.value.trim(), "audiotst");
 }
 
 window.onbeforeunload = function() {
@@ -109,7 +109,7 @@ function initMediaAccess() {
 	    let text = current.value.trim();
 	    if (text.length > 0) {
 		let fnb = filenameBase;
-		await saveUttToList(sessionField.value.trim(), fnb, text, true);
+		await saveAndAddToUttList(sessionField.value.trim(), fnb, text, true);
 		current.value = "";
 	    }
 	    // prepare new recording
@@ -640,82 +640,94 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
     return res;
 };
 
-// Save current utterance text to server, and append or update table with saved text
-// If readFromServer is set to true, the text will be read from the server
-// If readFromServer is not set to true, the text will be saved to server
-async function saveUttToList(session, fName, text, isEdited, readFromServer) {
+async function readFromServerAndAddToUttList(session, fName) {
+    var text = await getEditedText(session, fName);
+    if (text !== "") {
+	addToUttList(session, fName, text);
+    }
+}
+
+async function saveAndAddToUttList(session, fName, text, isEdited) {
     var savedSpan = document.getElementById(fName);
     let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
     let overwrite = !savedIsUndefined;
-    console.log("saveUttToList", session, fName, text, isEdited, overwrite);
+    console.log("saveAndAddToUttList", session, fName, text, isEdited, overwrite);
 
-    if (text.length === 0 && readFromServer) {
-	text = await getEditedText(session, fName);
-    }
-    
     if (text.length > 0 && fName !== undefined && fName !== null) {
-	if (readFromServer || textToServer(session, fName, text, isEdited, overwrite)) {
-	    var saved = document.getElementById("saved-utts-table");
-	    var textSpan = null;
-	    if (overwrite) {
-		textSpan = savedSpan;
-	    } else {
-		let div = document.createElement("div");
-		div.setAttribute("class","highlightonhover");
-		div.setAttribute("title",fName);
-		textSpan = document.createElement("span")
-		textSpan.id = fName;
-		textSpan.setAttribute("style","padding-left: 0.5em;");
-		let idSpan = document.createElement("span");
-		idSpan.textContent = shortFilenameBaseFor(fName);
-		idSpan.setAttribute("style","vertical-align: top; float: right; text-align: right; font-family: monospace");
-		let audioSpan = document.createElement("span");
-		let audio = document.createElement("audio");
-		let play = "&#9654;";
-		let pause = "&#9646;&#9646;";
-		audioSpan.innerHTML  = "<button style='width: 30px; text-align: center' class='btn black replay'>" + play + "</button>";
-		let playChar = audioSpan.firstChild.innerHTML;
-		audioSpan.style = "vertical-align: top; text-align: center";
-		audioSpan.title = "Play";
-		audioSpan.addEventListener("click", function () {
-		    if (audioSpan.firstChild.innerText === playChar) {
-			audio.play();
-			audioSpan.firstChild.innerHTML = pause;
-			audioSpan.title = "Pause";
-		    } else {
-			audio.pause();
-			audioSpan.firstChild.innerHTML = play;
-			audioSpan.title = "Play";
-		    }
-		});
-		audio.onplay = function() {
-		    console.log("audio.onplay");
-		};
-		audio.onpause = function() {
-		    console.log("audio.onpause");
-		};
-		audio.onended = function() {
-		    console.log("audio.onended");
+	if (textToServer(session, fName, text, isEdited, overwrite)) {
+	    addToUttList(session, fName, text);	    
+	}
+    }
+}
+
+async function addToUttList(session, fName, text) {
+    var savedSpan = document.getElementById(fName);
+    let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
+    let overwrite = !savedIsUndefined;
+
+    console.log("addToUttList", session, fName, text);
+
+    if (text.length > 0 && fName !== undefined && fName !== null) {
+	var saved = document.getElementById("saved-utts-table");
+	var textSpan = null;
+	if (overwrite) {
+	    textSpan = savedSpan;
+	} else {
+	    let div = document.createElement("div");
+	    div.setAttribute("class","highlightonhover");
+	    div.setAttribute("title",fName);
+	    textSpan = document.createElement("span")
+	    textSpan.id = fName;
+	    textSpan.setAttribute("style","padding-left: 0.5em;");
+	    let idSpan = document.createElement("span");
+	    idSpan.textContent = shortFilenameBaseFor(fName);
+	    idSpan.setAttribute("style","vertical-align: top; float: right; text-align: right; font-family: monospace");
+	    let audioSpan = document.createElement("span");
+	    let audio = document.createElement("audio");
+	    let play = "&#9654;";
+	    let pause = "&#9646;&#9646;";
+	    audioSpan.innerHTML  = "<button style='width: 30px; text-align: center' class='btn black replay'>" + play + "</button>";
+	    let playChar = audioSpan.firstChild.innerHTML;
+	    audioSpan.style = "vertical-align: top; text-align: center";
+	    audioSpan.title = "Play";
+	    audioSpan.addEventListener("click", function () {
+		if (audioSpan.firstChild.innerText === playChar) {
+		    audio.play();
+		    audioSpan.firstChild.innerHTML = pause;
+		    audioSpan.title = "Pause";
+		} else {
+		    audio.pause();
 		    audioSpan.firstChild.innerHTML = play;
 		    audioSpan.title = "Play";
-		};
-		cacheAudio(audio, audioSpan.firstChild, baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName);
-		div.appendChild(audioSpan);
-		audioSpan.appendChild(audio);
-		div.appendChild(textSpan);
-		div.appendChild(idSpan);
-		saved.appendChild(div);
-		scrollDown(document.getElementById("saved-utts"));
-	    }
-	    textSpan.textContent = text;
+		}
+	    });
+	    audio.onplay = function() {
+		console.log("audio.onplay");
+	    };
+	    audio.onpause = function() {
+		console.log("audio.onpause");
+	    };
+	    audio.onended = function() {
+		console.log("audio.onended");
+		audioSpan.firstChild.innerHTML = play;
+		audioSpan.title = "Play";
+	    };
+	    cacheAudio(audio, audioSpan.firstChild, baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName);
+	    div.appendChild(audioSpan);
+	    audioSpan.appendChild(audio);
+	    div.appendChild(textSpan);
+	    div.appendChild(idSpan);
+	    saved.appendChild(div);
+	    scrollDown(document.getElementById("saved-utts"));
 	}
+	textSpan.textContent = text;
     }
 }
 
 function saveEditedText() {
     let src = document.getElementById("current-utt");
     let text = src.value.trim();
-    saveUttToList(sessionField.value.trim(), filenameBase, text, true);
+    saveAndAddToUttList(sessionField.value.trim(), filenameBase, text, true);
 }
 
 

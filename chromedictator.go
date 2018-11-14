@@ -375,14 +375,14 @@ func getText(w http.ResponseWriter, r *http.Request, defaultExt string) {
 	session := vars["session"]
 	fileName := vars["filename"]
 	if fileName == "" {
-		msg := "get_audio: missing param 'filename'"
+		msg := "text: missing param 'filename'"
 		log.Print(msg)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 
 	}
 	if session == "" {
-		msg := "get_audio: missing param 'session'"
+		msg := "text: missing param 'session'"
 		log.Print(msg)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
@@ -417,6 +417,7 @@ func getText(w http.ResponseWriter, r *http.Request, defaultExt string) {
 		return
 	}
 
+	log.Printf("Server served text file %s", fullPath)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, "%s\n", string(resJSON))
 
