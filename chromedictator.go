@@ -67,6 +67,12 @@ type audioResponse struct {
 	Message  string `json:"message"`
 }
 
+type textResponse struct {
+	FileType string `json:"file_type"`
+	Text     string `json:"text"`
+	Message  string `json:"message"`
+}
+
 func persistAbbrevs() error {
 	return map2GobFile(abbrevs, abbrevFilePath)
 }
@@ -355,6 +361,65 @@ func mimeType(fName string) string {
 		return ""
 	}
 	return fmt.Sprintf("audio/%s", ext)
+}
+func getEditedText(w http.ResponseWriter, r *http.Request) {
+	getText(w, r, "edi")
+}
+func getRecogniserText(w http.ResponseWriter, r *http.Request) {
+	getText(w, r, "rec")
+}
+
+func getText(w http.ResponseWriter, r *http.Request, defaultExt string) {
+	var res textResponse
+	vars := mux.Vars(r)
+	session := vars["session"]
+	fileName := vars["filename"]
+	if fileName == "" {
+		msg := "get_audio: missing param 'filename'"
+		log.Print(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+
+	}
+	if session == "" {
+		msg := "get_audio: missing param 'session'"
+		log.Print(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+
+	}
+
+	fullPath := filepath.Join(baseDir, session, fileName)
+	ext := filepath.Ext(fullPath)
+	if ext == "" {
+		fullPath = fmt.Sprintf("%s.%s", fullPath, defaultExt)
+	}
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		res.Message = fmt.Sprintf("no such file: %s", fileName)
+	} else {
+		bytes, err := ioutil.ReadFile(fullPath)
+		if err != nil {
+			msg := fmt.Sprintf("get_text: failed to read audio file : %v", err)
+			log.Print(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+
+		res.FileType = mimeType(fullPath)
+		res.Text = string(bytes)
+	}
+
+	resJSON, err := rec.PrettyMarshal(res)
+	if err != nil {
+		msg := fmt.Sprintf("get_text: failed to create JSON from struct : %v", res)
+		log.Print(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "%s\n", string(resJSON))
+
 }
 
 func getAudio(w http.ResponseWriter, r *http.Request) {
@@ -744,6 +809,8 @@ func main() {
 	r.StrictSlash(true)
 
 	r.HandleFunc("/get_audio/{session}/{filename}", getAudio).Methods("GET")
+	r.HandleFunc("/get_edited_text/{session}/{filename}", getEditedText).Methods("GET")
+	r.HandleFunc("/get_recogniser_text/{session}/{filename}", getRecogniserText).Methods("GET")
 	r.HandleFunc("/save_audio", saveAudio).Methods("POST")
 	r.HandleFunc("/save_recogniser_text", saveRecogniserText).Methods("POST")
 	r.HandleFunc("/save_edited_text", saveEditedText).Methods("POST")

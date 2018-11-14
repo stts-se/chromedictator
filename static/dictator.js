@@ -68,7 +68,7 @@ window.onload = function () {
     document.getElementById("current-utt").focus();
 
     // insert dummy text/audio
-    // saveUttToList(sessionField.value.trim(), renewFilenameBase(), "testing testing", false);
+    saveUttToList(sessionField.value.trim(), "audio-test", "", false, true);
 }
 
 window.onbeforeunload = function() {
@@ -204,7 +204,7 @@ function initWebkitSpeechRecognition() {
     
     // on result from speech rec
     recognition.onresult = async function(event) {
-	console.log("recognition.onresult");
+	//console.log("recognition.onresult");
 	for (var i = event.resultIndex; i < event.results.length; ++i) {
 	    let text = event.results[i][0].transcript.trim();
 	    if (event.results[i].isFinal) {
@@ -641,14 +641,20 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
 };
 
 // Save current utterance text to server, and append or update table with saved text
-async function saveUttToList(session, fName, text, isEdited) {
+// If readFromServer is set to true, the text will be read from the server
+// If readFromServer is not set to true, the text will be saved to server
+async function saveUttToList(session, fName, text, isEdited, readFromServer) {
     var savedSpan = document.getElementById(fName);
     let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
     let overwrite = !savedIsUndefined;
     console.log("saveUttToList", session, fName, text, isEdited, overwrite);
+
+    if (text.length === 0 && readFromServer) {
+	text = await getEditedText(session, fName);
+    }
     
     if (text.length > 0 && fName !== undefined && fName !== null) {
-	if (await textToServer(session, fName, text, isEdited, overwrite)) {
+	if (readFromServer || textToServer(session, fName, text, isEdited, overwrite)) {
 	    var saved = document.getElementById("saved-utts-table");
 	    var textSpan = null;
 	    if (overwrite) {
@@ -656,7 +662,7 @@ async function saveUttToList(session, fName, text, isEdited) {
 	    } else {
 		let div = document.createElement("div");
 		div.setAttribute("class","highlightonhover");
-		div.setAttribute("title",filenameBase);
+		div.setAttribute("title",fName);
 		textSpan = document.createElement("span")
 		textSpan.id = fName;
 		textSpan.setAttribute("style","padding-left: 0.5em;");
@@ -682,7 +688,14 @@ async function saveUttToList(session, fName, text, isEdited) {
 			audioSpan.title = "Play";
 		    }
 		});
+		audio.onplay = function() {
+		    console.log("audio.onplay");
+		};
+		audio.onpause = function() {
+		    console.log("audio.onpause");
+		};
 		audio.onended = function() {
+		    console.log("audio.onended");
 		    audioSpan.firstChild.innerHTML = play;
 		    audioSpan.title = "Play";
 		};
@@ -709,11 +722,44 @@ function saveEditedText() {
 // -------------------
 // MISC
 
+
+function getEditedText(sessionName, fName) {
+    return getText(sessionName, fName, "edi");
+}
+
+async function getText(sessionName, fName, extension) {
+    let url = baseURL + "/get_edited_text/" + sessionName + "/" + fName + "." + extension;
+    let res = "";
+    
+    let func = async function() {
+	
+	const resp = await fetch(url);
+	
+	if (resp.ok) {
+	    const content = await resp.text();
+	    //console.log(content);
+	    try {
+		const json = JSON.parse(content);
+		if (json.text === undefined || json.text === null || json.text === "" ) {
+		    logMessage("error", "couldn't get text from server : " + json.message);
+		} else {
+		    res = json.text;
+		}
+	    } catch (err) {
+	    	logMessage("error", err.message);
+	    }
+	} else {
+	    console.log(resp);
+	    logMessage("error", "couldn't get text from server : " + resp.statusText);
+	}
+
+    }
+    await func();
+    return res;
+}
+
 // cache audio for playback (fetch from server)
 function cacheAudio(audioElement, playPauseButton, url) {
-
-    //let url = baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName;
-    //let url = audio.src;
 
     (async () => {
 	
@@ -757,7 +803,6 @@ function cacheAudio(audioElement, playPauseButton, url) {
 	    console.log(resp);
 	    logMessage("error", "couldn't get audio from server : " + resp.statusText);
 	}
-
 	
     })();
 
