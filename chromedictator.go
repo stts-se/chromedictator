@@ -75,6 +75,11 @@ type textResponse struct {
 	Message  string `json:"message"`
 }
 
+type listResponse struct {
+	Error  string   `json:"error"`
+	Result []string `json:"result"`
+}
+
 func persistAbbrevs() error {
 	return map2GobFile(abbrevs, abbrevFilePath)
 }
@@ -145,22 +150,30 @@ func listSessions(w http.ResponseWriter, r *http.Request) {
 }
 
 func listFilenames(w http.ResponseWriter, r *http.Request) {
+	res := listResponse{}
 	params := mux.Vars(r)
 	session := params["session"]
 	if session == "" {
 		http.Error(w, "param 'session' is required", http.StatusInternalServerError)
 		return
 	}
-	res, err := listFiles(path.Join(baseDir, session))
-	if err != nil {
-		msg := fmt.Sprintf("listBasenames: couldn't list files : %v", err)
-		log.Println(msg)
-		http.Error(w, "failed to return list of files", http.StatusInternalServerError)
-		return
+
+	if sessionExists(session) {
+		files, err := listFiles(path.Join(baseDir, session))
+		if err != nil {
+			msg := fmt.Sprintf("listFilenames: couldn't list files : %v", err)
+			log.Println(msg)
+			http.Error(w, "failed to return list of files", http.StatusInternalServerError)
+			return
+		}
+		res.Result = files
+	} else {
+		res.Error = fmt.Sprintf("No such session: %s", session)
 	}
+
 	resJSON, err := json.Marshal(res)
 	if err != nil {
-		msg := fmt.Sprintf("listBasenames: failed to marshal map of abbreviations : %v", err)
+		msg := fmt.Sprintf("listFilenames: failed to marshal map of abbreviations : %v", err)
 		log.Println(msg)
 		http.Error(w, "failed to return list of files", http.StatusInternalServerError)
 		return
@@ -177,15 +190,21 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func listFiles(dir string) ([]string, error) {
+func sessionExists(sessionName string) bool {
+	if _, err := os.Stat(path.Join(baseDir, sessionName)); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+func listFiles(sessionDir string) ([]string, error) {
 	res := []string{}
-	files, err := ioutil.ReadDir(dir)
+	files, err := ioutil.ReadDir(sessionDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return res, fmt.Errorf("no such session: %s", dir)
-		} else {
-			return res, err
+			return res, fmt.Errorf("no such session: %s", sessionDir)
 		}
+		return res, err
 	}
 	for _, f := range files {
 		fName := f.Name()
@@ -202,26 +221,31 @@ func listFiles(dir string) ([]string, error) {
 }
 
 func listBasenames(w http.ResponseWriter, r *http.Request) {
+	res := listResponse{}
 	params := mux.Vars(r)
 	session := params["session"]
 	if session == "" {
 		http.Error(w, "param 'session' is required", http.StatusInternalServerError)
 		return
 	}
-	fNames, err := listFiles(path.Join(baseDir, session))
-	if err != nil {
-		msg := fmt.Sprintf("listBasenames: couldn't list files : %v", err)
-		log.Println(msg)
-		http.Error(w, "failed to return list of files", http.StatusInternalServerError)
-		return
-	}
-	res := []string{}
-	for _, fName := range fNames {
-		basename := strings.TrimSuffix(fName, filepath.Ext(fName))
-		if !contains(res, basename) {
-			res = append(res, basename)
+	if sessionExists(session) {
+		fNames, err := listFiles(path.Join(baseDir, session))
+		if err != nil {
+			msg := fmt.Sprintf("listBasenames: couldn't list files : %v", err)
+			log.Println(msg)
+			http.Error(w, "failed to return list of files", http.StatusInternalServerError)
+			return
 		}
+		for _, fName := range fNames {
+			basename := strings.TrimSuffix(fName, filepath.Ext(fName))
+			if !contains(res.Result, basename) {
+				res.Result = append(res.Result, basename)
+			}
+		}
+	} else {
+		res.Error = fmt.Sprintf("No such session: %s", session)
 	}
+
 	resJSON, err := json.Marshal(res)
 	if err != nil {
 		msg := fmt.Sprintf("listBasenames: failed to marshal map of abbreviations : %v", err)
@@ -440,15 +464,18 @@ func getText(w http.ResponseWriter, r *http.Request, defaultExt string) {
 	basename := strings.TrimSuffix(fullPath, filepath.Ext(fullPath))
 	jsonFile := basename + ".json"
 
-	audioJSON, err := readJSONFile(jsonFile)
-	if err != nil {
-		msg := fmt.Sprintf("get_text: failed to read json file : %v", err)
-		log.Print(msg)
-		http.Error(w, msg, http.StatusInternalServerError)
-		return
+	if _, err := os.Stat(jsonFile); os.IsNotExist(err) {
+		log.Printf("No json file for basename %s", basename)
+	} else {
+		audioJSON, err := readJSONFile(jsonFile)
+		if err != nil {
+			msg := fmt.Sprintf("get_text: failed to read json file : %v", err)
+			log.Print(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+		res.audioJSON = audioJSON
 	}
-
-	res.audioJSON = audioJSON
 
 	resJSON, err := rec.PrettyMarshal(res)
 	if err != nil {

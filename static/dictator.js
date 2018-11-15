@@ -49,7 +49,7 @@ window.onload = function () {
 
     var url = new URL(document.URL);
     var session = url.searchParams.get('session')
-    if (session != null && session != "") {
+    if (session !== null && session !== "") {
 	sessionField.value = session.trim();
     }
     validateSessionName();
@@ -68,7 +68,7 @@ window.onload = function () {
     document.getElementById("current-utt").focus();
 
     var loadFromServer = url.searchParams.get('load_from_server')
-    if (loadFromServer != null && loadFromServer != "" && loadFromServer === "true") {
+    if (loadFromServer !== null && loadFromServer !== "" && loadFromServer === "true") {
 	document.getElementById("load_saved_text").click();	
     } else {
 	// insert dummy text/audio
@@ -507,7 +507,7 @@ function visualize() {
     visCanvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
     
     var draw = function() {
-	if (recStartTime != null) {
+	if (recStartTime !== null) {
 	    var recDur = new Date().getTime() - recStartTime;
 	    document.getElementById("rec_duration").textContent = Math.floor(recDur/1000) + "s";
 	}
@@ -650,17 +650,26 @@ async function readFromServerAndAddToUttList(session, fName) {
     var text = await getEditedText(session, fName);
     if (text !== "") {
 	addToUttList(session, fName, text);
+	return true;
+    } else {
+	text = await getRecognisedText(session, fName);
+	if (text !== "") {
+	    addToUttList(session, fName, text);
+	    return true;
+	} else
+	    return false;
     }
 }
 
 // save text on server, and add to 'saved text' area with cached audio 
 async function saveAndAddToUttList(session, fName, text, isEdited) {
-    var savedSpan = document.getElementById(fName);
-    let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
-    let overwrite = !savedIsUndefined;
-    console.log("saveAndAddToUttList", session, fName, text, isEdited, overwrite);
+    if (fName !== undefined && fName !== null && text.length > 0) {
+	console.log("saveAndAddToUttList", session, fName, text, isEdited, overwrite);
 
-    if (text.length > 0 && fName !== undefined && fName !== null) {
+	var savedSpan = document.getElementById(fName);
+	let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
+	let overwrite = !savedIsUndefined;
+
 	if (textToServer(session, fName, text, isEdited, overwrite)) {
 	    addToUttList(session, fName, text);	    
 	}
@@ -675,7 +684,7 @@ async function addToUttList(session, fName, text) {
 
     console.log("addToUttList", session, fName, text);
 
-    if (text.length > 0 && fName !== undefined && fName !== null) {
+    //if (text.length > 0 && fName !== undefined && fName !== null) {
 	var saved = document.getElementById("saved-utts-table");
 	var textSpan = null;
 	if (overwrite) {
@@ -729,7 +738,7 @@ async function addToUttList(session, fName, text) {
 	    scrollDown(document.getElementById("saved-utts"));
 	}
 	textSpan.textContent = text;
-    }
+    //}
 }
 
 function saveEditedText() {
@@ -745,6 +754,10 @@ function saveEditedText() {
 
 function getEditedText(sessionName, fName) {
     return getText(sessionName, fName, "edi");
+}
+
+function getRecognisedText(sessionName, fName) {
+    return getText(sessionName, fName, "rec");
 }
 
 async function getText(sessionName, fName, extension) {
@@ -764,7 +777,6 @@ async function getText(sessionName, fName, extension) {
 		    logMessage("error", "couldn't get text from server : " + json.message);
 		} else {
 		    res = json.text;
-		    console.log(json);
 		}
 	    } catch (err) {
 	    	logMessage("error", err.message);
@@ -847,7 +859,7 @@ function trackTextChanges() {
     let savedText = "";
     if (savedSpan !== undefined && savedSpan !== null)
 	savedText = savedSpan.textContent.trim();
-    let textChanged = (savedText != text);
+    let textChanged = (savedText !== text);
     if (textChanged && filenameBase !== null) 
 	enable(saveTextButton);
     else
@@ -899,34 +911,53 @@ document.getElementById("clear_saved_text").addEventListener("click", function()
 
 async function listBasenames(sessionName) {
     let url = baseURL + "/admin/list/basenames/" + sessionName;
-    let names = await fetch(url).then(r => r.json());    
-    return names;
+    return listFromURL(url, "basenames");
+}
+
+async function listFromURL(url, description) {
+    let list = await fetch(url).then( r => {
+	if (!r.ok) throw r
+	return r.json();
+    }).then(j => {
+	if (j.error !== "") {
+	    logMessage("error", "couldn't list " + description + ": " + j.error);
+	    return null;
+	} else {
+	    return j.result;
+	}
+    }).catch( r => {
+	logMessage("error", "couldn't list " + description + ": " + r.responseText);
+	return null;
+    });
+    return list;
 }
 
 async function listFiles(sessionName) {
     let url = baseURL + "/admin/list/files/" + sessionName;
-    let names = await fetch(url).then(r => r.json());    
-    return names;
+    return listFromURL(url, "files");
 }
 
 document.getElementById("load_saved_text").addEventListener("click", async function() {
     document.getElementById("saved-utts-table").textContent="";
     let sessionName = sessionField.value.trim();
     let names = await listFiles(sessionName);
-    let nLoaded = 0;
-    for (var i=0; i<names.length; i++) {
-	let fName = names[i];
-	if (fName.endsWith(".json")) {
-	    nLoaded ++;
-	    let baseName = fName.replace(/[.]json$/,"");
-	    console.log(baseName);
-	    await readFromServerAndAddToUttList(sessionName, baseName);
+    if (names !== null) {
+	let nLoaded = 0;
+	for (var i=0; i<names.length; i++) {
+	    let fName = names[i];
+	    if (fName.endsWith(".webm")) {
+		let baseName = fName.replace(/[.][^.]+$/,"");
+		//console.log(baseName);
+		if (await readFromServerAndAddToUttList(sessionName, baseName)) {
+		    nLoaded++;
+		}
+	    }
 	}
+	let utts = "utterance";
+	if (nLoaded > 1)
+	    utts = utts + "s";
+	logMessage("info", "Loaded " + nLoaded + " " + utts + " from server");
     }
-    let utts = "utterance";
-    if (nLoaded > 1)
-	utts = utts + "s";
-    logMessage("info", "Loaded " + nLoaded + " " + utts + " from server");
 });
 
 
