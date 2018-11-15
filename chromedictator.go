@@ -833,13 +833,7 @@ var walkedURLs []string
 
 // TODO Use a HTML template to generate complete page?
 func generateDoc(w http.ResponseWriter, r *http.Request) {
-	var params = []string{}
-	params = append(params, " session : session name")
-	params = append(params, " load_from_server : load utterances from server (for current session)")
-
-	s := "URLs:\n " + strings.Join(walkedURLs, "\n ")
-	s = s + "\n\nParams:\n " + strings.Join(params, "\n ")
-
+	s := strings.Join(walkedURLs, "\n")
 	fmt.Fprintf(w, "%s\n", s)
 }
 
