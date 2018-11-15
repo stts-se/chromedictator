@@ -664,11 +664,11 @@ async function readFromServerAndAddToUttList(session, fName) {
 // save text on server, and add to 'saved text' area with cached audio 
 async function saveAndAddToUttList(session, fName, text, isEdited) {
     if (fName !== undefined && fName !== null && text.length > 0) {
-	console.log("saveAndAddToUttList", session, fName, text, isEdited, overwrite);
-
 	var savedSpan = document.getElementById(fName);
 	let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
 	let overwrite = !savedIsUndefined;
+
+	console.log("saveAndAddToUttList", session, fName, text, isEdited, overwrite);
 
 	if (textToServer(session, fName, text, isEdited, overwrite)) {
 	    addToUttList(session, fName, text);	    
@@ -697,7 +697,7 @@ async function addToUttList(session, fName, text) {
 	    textSpan.id = fName;
 	    textSpan.setAttribute("style","padding-left: 0.5em;");
 	    let idSpan = document.createElement("span");
-	    idSpan.textContent = shortFilenameBaseFor(fName);
+	    idSpan.textContent = " " + shortFilenameBaseFor(fName); // space to make it easier to copy id without text
 	    idSpan.setAttribute("style","vertical-align: top; float: right; text-align: right; font-family: monospace");
 	    let audioSpan = document.createElement("span");
 	    let audio = document.createElement("audio");
@@ -730,8 +730,9 @@ async function addToUttList(session, fName, text) {
 		audioSpan.title = "Play";
 	    };
 	    cacheAudio(audio, audioSpan.firstChild, baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName);
-	    div.appendChild(audioSpan);
 	    audioSpan.appendChild(audio);
+
+	    div.appendChild(audioSpan);
 	    div.appendChild(textSpan);
 	    div.appendChild(idSpan);
 	    saved.appendChild(div);
