@@ -742,25 +742,22 @@ async function addToUttList(session, fName, text) {
     //}
 }
 
-function saveEditedText() {
-    let src = document.getElementById("current-utt");
-    let text = src.value.trim();
-    saveAndAddToUttList(sessionField.value.trim(), filenameBase, text, true);
-}
-
 
 // -------------------
 // MISC
 
 
+// fetch edited text (.edi file) from server for the specified session and basename
 function getEditedText(sessionName, fName) {
     return getText(sessionName, fName, "edi");
 }
 
+// fetch recognised text (.rec file) from server for the specified session and basename
 function getRecognisedText(sessionName, fName) {
     return getText(sessionName, fName, "rec");
 }
 
+// fetch text from server for the specified session, basename and extension
 async function getText(sessionName, fName, extension) {
     let url = baseURL + "/get_edited_text/" + sessionName + "/" + fName + "." + extension;
     let res = "";
@@ -792,7 +789,7 @@ async function getText(sessionName, fName, extension) {
     return res;
 }
 
-// cache audio for playback (fetch from server)
+// fetch audio from server, and cache for playback
 function cacheAudio(audioElement, playPauseButton, url) {
 
     (async () => {
@@ -842,6 +839,7 @@ function cacheAudio(audioElement, playPauseButton, url) {
 
 }
 
+// validate session name text field
 function validateSessionName() {
     if (sessionField.value.trim().length > 0) {
 	enable(recStartButton);
@@ -854,6 +852,7 @@ function validateSessionName() {
     }
 }
 
+// track text changes and disable save button it the text is unchanged compared to the previously saved version
 function trackTextChanges() {
     let savedSpan = document.getElementById(filenameBase);
     let text = document.getElementById("current-utt").value.trim();
@@ -903,18 +902,31 @@ document.getElementById("current-utt").addEventListener("keyup", function() {
     }
 });
 
-saveTextButton.addEventListener("click", function() { saveEditedText() });
+saveTextButton.addEventListener("click", function() {
+    let src = document.getElementById("current-utt");
+    let text = src.value.trim();
+    saveAndAddToUttList(sessionField.value.trim(), filenameBase, text, true);
+});
 
 document.getElementById("clear_saved_text").addEventListener("click", function() {
     document.getElementById("saved-utts-table").textContent="";
     logMessage("info", "Cleared text view");
 });
 
+
+// list file basenames on server
 async function listBasenames(sessionName) {
     let url = baseURL + "/admin/list/basenames/" + sessionName;
     return listFromURL(url, "basenames");
 }
 
+// list file names on server
+async function listFiles(sessionName) {
+    let url = baseURL + "/admin/list/files/" + sessionName;
+    return listFromURL(url, "files");
+}
+
+// get list from server url
 async function listFromURL(url, description) {
     let list = await fetch(url).then( r => {
 	if (!r.ok) throw r
@@ -931,11 +943,6 @@ async function listFromURL(url, description) {
 	return null;
     });
     return list;
-}
-
-async function listFiles(sessionName) {
-    let url = baseURL + "/admin/list/files/" + sessionName;
-    return listFromURL(url, "files");
 }
 
 document.getElementById("load_saved_text").addEventListener("click", async function() {
