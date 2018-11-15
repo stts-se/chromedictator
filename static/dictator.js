@@ -1,29 +1,28 @@
 "use strict";
 
-let baseURL = window.location.protocol + '//' + window.location.host + window.location.pathname.replace(/\/$/g,"");
-
-// See e.g.:
+// For recording API, see e.g.:
 // https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API 
 // https://mozdevs.github.io/MediaRecorder-examples/record-live-audio.html
 // https://github.com/mdn/voice-change-o-matic
 // https://github.com/mdn/voice-change-o-matic/blob/gh-pages/scripts/app.js
 
+const baseURL = window.location.protocol + '//' + window.location.host + window.location.pathname.replace(/\/$/g,"");
 
 const keyCodeEnter = 13;
 const keyCodeSpace = 32;
 const keyCodeEscape = 27;
 
-var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-var recorder;
-var recognition;
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let recorder;
+let recognition;
 
-var visAnalyser = audioCtx.createAnalyser();
+const visAnalyser = audioCtx.createAnalyser();
 visAnalyser.minDecibels = -90;
 visAnalyser.maxDecibels = -10;
 visAnalyser.smoothingTimeConstant = 0.85;
 
-var visCanvas = document.querySelector('.visualiser');
-var visCanvasCtx = visCanvas.getContext("2d");
+const visCanvas = document.querySelector('.visualiser');
+const visCanvasCtx = visCanvas.getContext("2d");
 
 const recStartButton = document.getElementById("rec_start");
 const recSendButton = document.getElementById("rec_send");
@@ -32,12 +31,12 @@ const sessionField = document.getElementById("sessionname");
 
 const saveTextButton = document.getElementById("save_edited_text");
 
-var filenameBase;
-var recStartTime;
-var isRecording = false;
-var sendAudio = false;
+let filenameBase;
+let recStartTime;
+let isRecording = false;
+let sendAudio = false;
 
-var abbrevMap = {};
+let abbrevMap = {};
 
 
 // ------------------
@@ -47,8 +46,8 @@ window.onload = function () {
 
     document.getElementById("refresh_time").innerText = new Date().toLocaleString();
 
-    var url = new URL(document.URL);
-    var session = url.searchParams.get('session')
+    const url = new URL(document.URL);
+    const session = url.searchParams.get('session')
     if (session !== null && session !== "") {
 	sessionField.value = session.trim();
     }
@@ -67,7 +66,7 @@ window.onload = function () {
     
     document.getElementById("current-utt").focus();
 
-    var loadFromServer = url.searchParams.get('load_from_server')
+    const loadFromServer = url.searchParams.get('load_from_server')
     if (loadFromServer !== null && loadFromServer !== "" && loadFromServer === "true") {
 	document.getElementById("load_saved_text").click();	
     } else {
@@ -83,9 +82,9 @@ window.onbeforeunload = function() {
 document.addEventListener("keyup", function() { globalKeyListener() });
 
 function initMediaAccess() {
-    var source;
-    var stream;
-    var mediaAccess = navigator.mediaDevices.getUserMedia({'audio': true, video: false});
+    let source;
+    let stream;
+    const mediaAccess = navigator.mediaDevices.getUserMedia({'audio': true, video: false});
     
     mediaAccess.then(function(stream) {
 	visualize();
@@ -110,10 +109,10 @@ function initMediaAccess() {
 	recorder.onstart = async function(evt) {
 	    console.log("recorder.onstart called");
 	    // save working text if unsaved
-	    let current = document.getElementById("current-utt");
-	    let text = current.value.trim();
+	    const current = document.getElementById("current-utt");
+	    const text = current.value.trim();
 	    if (text.length > 0) {
-		let fnb = filenameBase;
+		const fnb = filenameBase;
 		await saveAndAddToUttList(sessionField.value.trim(), fnb, text, true);
 		current.value = "";
 	    }
@@ -130,32 +129,32 @@ function initMediaAccess() {
 	    logMessage("info", "Recording started");
 	} 
 	recorder.ondataavailable = async function (evt) {	    
-	    let thisRecStart = new Date(recStartTime).toLocaleString();
+	    const thisRecStart = new Date(recStartTime).toLocaleString();
 	    console.log("recorder.ondataavailable | sendAudio=" + sendAudio + ", thisRecStart=" + thisRecStart);
 	    recStartTime = null;
 	    document.getElementById("rec_duration").innerHTML = "&nbsp;"; 
 
-	    let sess = sessionField.value.trim();
+	    const sess = sessionField.value.trim();
 	    if (sess.length === 0) {
 		logMessage("error","cannot send audio with empty session id");
 		return;
 	    }
 
 	    if (sendAudio) {
-		let recEnd = new Date().toLocaleString();
+		const recEnd = new Date().toLocaleString();
 		
-		let ou = URL.createObjectURL(evt.data);
+		const ou = URL.createObjectURL(evt.data);
 		
-		var audio = document.getElementById('audio');
+		const audio = document.getElementById('audio');
 		audio.src = ou;
 		audio.disabled = false;
 	    
-		let blob = await fetch(ou).then(r => r.blob());
+		const blob = await fetch(ou).then(r => r.blob());
 
-		let reader = new FileReader();
+		const reader = new FileReader();
 		reader.addEventListener("loadend", function() {
-		    let rez = reader.result;
-		    let payload = {
+		    const rez = reader.result;
+		    const payload = {
 			"session_id" : sess,
 			"file_name" : filenameBase,
 			"data" : btoa(rez),
@@ -175,7 +174,7 @@ function initMediaAccess() {
     
     mediaAccess.catch(function(err) {
 	console.log("error from getUserMedia:", err);
-	let msg = "Couldn't initialize recorder: " + err;
+	const msg = "Couldn't initialize recorder: " + err;
 	alert(msg);
 	logMessage("error", msg);
     });
@@ -191,17 +190,17 @@ function initWebkitSpeechRecognition() {
 
     recognition = new webkitSpeechRecognition();
 
-    let langSelect = document.getElementById("lang_select");
+    const langSelect = document.getElementById("lang_select");
     langSelect.addEventListener("change", function(event) {
-	var i  = langSelect.selectedIndex
-	var lang = langSelect.options[i].value;
+	const i = langSelect.selectedIndex
+	const lang = langSelect.options[i].value;
 	recognition.lang = lang;
 	logMessage("info", "language set to: " + recognition.lang);
     });
 
 
-    let tempResponse = document.querySelector("#recognition-result .content");
-    let finalResponse = document.getElementById("current-utt");
+    const tempResponse = document.querySelector("#recognition-result .content");
+    const finalResponse = document.getElementById("current-utt");
     finalResponse.addEventListener('keyup', checkForAbbrev);
     recognition.lang = "sv";
     recognition.continuous = true;
@@ -210,8 +209,8 @@ function initWebkitSpeechRecognition() {
     // on result from speech rec
     recognition.onresult = async function(event) {
 	//console.log("recognition.onresult");
-	for (var i = event.resultIndex; i < event.results.length; ++i) {
-	    let text = event.results[i][0].transcript.trim();
+	for (let i = event.resultIndex; i < event.results.length; ++i) {
+	    const text = event.results[i][0].transcript.trim();
 	    if (event.results[i].isFinal) {
 		console.log("recognition.onresult final");
 
@@ -227,8 +226,8 @@ function initWebkitSpeechRecognition() {
 		finalResponse.focus();
 	    	tempResponse.innerHTML = "";
 
-		let isEdited = false;
-		let overwrite = false;
+		const isEdited = false;
+		const overwrite = false;
 		await textToServer(sessionField.value.trim(), filenameBase, text.trim(), isEdited, overwrite);
 		
 				
@@ -248,7 +247,7 @@ function initWebkitSpeechRecognition() {
 	if (!isRecording) {
 	    try {
 		recorder.start();
-	    } catch {}
+	    } catch(err) {}
 	}
     }
     
@@ -257,7 +256,7 @@ function initWebkitSpeechRecognition() {
 	if (isRecording) {
 	    try {
 		recorder.stop();
-	    } catch {}
+	    } catch(err) {}
 	}
     };
 
@@ -266,7 +265,7 @@ function initWebkitSpeechRecognition() {
 	if (!isRecording) {
 	    try {
 		recorder.start();
-	    } catch {}
+	    } catch(err) {}
 	}
     }
     
@@ -275,7 +274,7 @@ function initWebkitSpeechRecognition() {
 	if (isRecording) {
 	    try {
 		recorder.stop();
-	    } catch {}
+	    } catch(err) {}
 	}
     };
 
@@ -284,7 +283,7 @@ function initWebkitSpeechRecognition() {
 	if (!isRecording) {
 	    try {
 		recorder.start();
-	    } catch {}
+	    } catch(err) {}
 	}
     };
     recognition.onspeechend = function() {
@@ -292,7 +291,7 @@ function initWebkitSpeechRecognition() {
 	if (isRecording) {
 	    try {
 		recorder.stop();
-	    } catch {}
+	    } catch(err) {}
 	}
     };
     
@@ -317,7 +316,7 @@ function initWebkitSpeechRecognition() {
 	audio.src = "";
 	try {
 	    recorder.stop();
-	} catch {}
+	} catch(err) {}
 	enable(recStartButton);
 	disable(recSendButton);
 	disable(recCancelButton);
@@ -342,11 +341,11 @@ function populateShortcuts() {
 async function loadAbbrevTable() {
     await fetch(baseURL+ "/abbrev/list").then(async function(r) {
 	if (r.ok) {
-	    let serverAbbrevs = await r.json();
+	    const serverAbbrevs = await r.json();
 	    abbrevMap = {};
-	    for (var i = 0; i < serverAbbrevs.length; i++) {
+	    for (let i = 0; i < serverAbbrevs.length; i++) {
 		//console.log("i: ", i, serverAbbrevs[i]);
-		let a = serverAbbrevs[i];
+		const a = serverAbbrevs[i];
 		abbrevMap[a.abbrev] = a.expansion;
 	    };
 	    updateAbbrevTable();
@@ -357,20 +356,20 @@ async function loadAbbrevTable() {
 };
 
 function updateAbbrevTable() {
-    let at = document.getElementById("abbrev_table_body");
+    const at = document.getElementById("abbrev_table_body");
     at.innerHTML = '';
     Object.keys(abbrevMap).forEach(function(k) {
-    	let v = abbrevMap[k];
-    	let tr = document.createElement('tr');
-    	let td1 = document.createElement('td');
-    	let td2 = document.createElement('td');
-    	let td3 = document.createElement('td');
+    	const v = abbrevMap[k];
+    	const tr = document.createElement('tr');
+    	const td1 = document.createElement('td');
+    	const td2 = document.createElement('td');
+    	const td3 = document.createElement('td');
 
     	td1.innerText = k;
     	td2.innerText = v;
 	td3.setAttribute("class","abbrev_row_delete");
 	td3.setAttribute("style","vertical-align: middle; horizontal-align: left");
-	let del = document.createElement('button');
+	const del = document.createElement('button');
 	del.innerHTML = "&#x274C;";
 	del.setAttribute("style","background: none; vertical-align: middle; text-align: left; border: none; font-size: 50%; width: 100%; height: 100%");
 	del.setAttribute("title", "delete abbrev '" + k + "'");
@@ -386,16 +385,16 @@ function updateAbbrevTable() {
     });       
 
     // 'add' section below
-    let tr = document.createElement('tr');
-    let td1 = document.createElement('td');
-    let td2 = document.createElement('td');
-    let td3 = document.createElement('td');
+    const tr = document.createElement('tr');
+    const td1 = document.createElement('td');
+    const td2 = document.createElement('td');
+    const td3 = document.createElement('td');
     
     td1.innerHTML = "<input id='abbrev_add_key' style='height: 20pt; font-size: 100%'/>";
     td2.innerHTML = "<input id='abbrev_add_value' style='height: 20pt; font-size: 100%'/>";
     td3.setAttribute("class","abbrev_row_add");
     td3.setAttribute("style","vertical-align: middle");
-    let add = document.createElement('button');
+    const add = document.createElement('button');
     add.setAttribute("title", "add");
     add.setAttribute("class", "btn");
     add.setAttribute("style","vertical-align: middle; padding: .2rem .75rem;");
@@ -408,9 +407,9 @@ function updateAbbrevTable() {
     tr.appendChild(td3);
     at.appendChild(tr);
 
-    let addThisAbbrev = function() {
-	let from = document.getElementById("abbrev_add_key").value;
-	let to = document.getElementById("abbrev_add_value").value;
+    const addThisAbbrev = function() {
+	const from = document.getElementById("abbrev_add_key").value;
+	const to = document.getElementById("abbrev_add_value").value;
 	addAbbrev(from, to);
 	loadAbbrevTable();
     }
@@ -427,7 +426,7 @@ function updateAbbrevTable() {
 	addThisAbbrev();
     });
 
-    let nAbbrevs = Object.keys(abbrevMap).length;
+    const nAbbrevs = Object.keys(abbrevMap).length;
     document.getElementById("abbrev_count").textContent = "(" + nAbbrevs + ")";
 
 }
@@ -454,34 +453,34 @@ async function deleteAbbrev(abbrev) {
 };
 
 
-var leftWordRE = /(?:^| +)([^ ]+)$/; // TODO Really no need for regexp,
+const leftWordRE = /(?:^| +)([^ ]+)$/; // TODO Really no need for regexp,
 				    // just pick off characters until
 				    // space, etc, or end of string?
 
 function checkForAbbrev(evt) {
     if ( evt.key === " ") {
 	// Ugh... going in circles...
-	let ta = document.getElementById("current-utt");
-	let startPos = ta.selectionStart;
-	let end = ta.selectionEnd;
+	const ta = document.getElementById("current-utt");
+	const startPos = ta.selectionStart;
+	const end = ta.selectionEnd;
 	
-	let text = ta.value;
+	const text = ta.value;
 	// -1 is to remove the trailing space
-	let stringUp2Cursor = text.substring(0,startPos-1);
+	const stringUp2Cursor = text.substring(0,startPos-1);
 	
 	// wordBeforeSpace will have a trailing space
-	let regexRes = leftWordRE.exec(stringUp2Cursor);
+	const regexRes = leftWordRE.exec(stringUp2Cursor);
 	if (regexRes === null) {
 	    return;
 	};
-	let wordBeforeSpace = regexRes[0]; 
+	const wordBeforeSpace = regexRes[0]; 
 	
 	if (abbrevMap.hasOwnProperty(wordBeforeSpace.trim())) {
 	    //console.log(wordBeforeSpace, abbrevMap[wordBeforeSpace]);
 	    // Match found. Replace abbreviation with its expansion
-	    let textBefore = text.substring(0,startPos - wordBeforeSpace.length);
-	    let textAfter = text.substring(startPos);
-	    let expansion = abbrevMap[wordBeforeSpace.trim()];
+	    const textBefore = text.substring(0,startPos - wordBeforeSpace.length);
+	    const textAfter = text.substring(startPos);
+	    const expansion = abbrevMap[wordBeforeSpace.trim()];
 	    
 	    
 	    ta.value = textBefore.trim() + " " + expansion + " " + textAfter.trim();
@@ -497,34 +496,34 @@ function checkForAbbrev(evt) {
 // VISUAL FEEDBACK (visual feedback on audio input; black pane with red bars)
 function visualize() {
 
-    var WIDTH = visCanvas.width;
-    var HEIGHT = visCanvas.height;
+    const WIDTH = visCanvas.width;
+    const HEIGHT = visCanvas.height;
         
     visAnalyser.fftSize = 256;
-    var bufferLengthAlt = visAnalyser.frequencyBinCount;
-    var dataArrayAlt = new Uint8Array(bufferLengthAlt);
+    const bufferLengthAlt = visAnalyser.frequencyBinCount;
+    const dataArrayAlt = new Uint8Array(bufferLengthAlt);
     
     visCanvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
     
-    var draw = function() {
+    const draw = function() {
 	if (recStartTime !== null) {
-	    var recDur = new Date().getTime() - recStartTime;
+	    const recDur = new Date().getTime() - recStartTime;
 	    document.getElementById("rec_duration").textContent = Math.floor(recDur/1000) + "s";
 	}
     
-	var drawVisual = requestAnimationFrame(draw);
+	const drawVisual = requestAnimationFrame(draw);
 	
 	visAnalyser.getByteFrequencyData(dataArrayAlt);
 	
 	visCanvasCtx.fillStyle = 'rgb(0, 0, 0)';
 	visCanvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
 	
-	var barWidth = (WIDTH / bufferLengthAlt) * 2.5;
-	var barHeight;
-	var x = 0;
+	const barWidth = (WIDTH / bufferLengthAlt) * 2.5;
+	let barHeight;
+	let x = 0;
 	
 	if (isRecording) { 
-	    for(var i = 0; i < bufferLengthAlt; i++) {
+	    for(let i = 0; i < bufferLengthAlt; i++) {
 		barHeight = dataArrayAlt[i];
 		
 		//visCanvasCtx.fillStyle = 'green';
@@ -556,7 +555,7 @@ async function soundToServer(payload) {
 
     console.log("soundToServer", payload);
     
-    let url = baseURL + "/save_audio";
+    const url = baseURL + "/save_audio";
     
     (async () => {
 	
@@ -575,8 +574,8 @@ async function soundToServer(payload) {
 	    try {
 		const json = JSON.parse(content);
 		logMessage("info", json.message);
-	    } catch {
-		logMessage("error", content);
+	    } catch(err) {
+		logMessage("error", "couldn't parse json: " + err);
 	    }
 	} else {
 	    console.log(rawResponse);
@@ -593,7 +592,7 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
 
     console.log("textToServer", sessionName, fileName, text, isEdited, overwrite);
     
-    let payload = {
+    const payload = {
 	"session_id" : sessionName,
 	"file_name" : fileName,
 	"data" : text,
@@ -605,7 +604,7 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
     if (isEdited)
 	url = baseURL + "/save_edited_text";
     
-    let f = (async () => {
+    const f = (async () => {
 	
 	const rawResponse = await fetch(url, {
 	    method: "POST",
@@ -623,8 +622,8 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
 		const json = JSON.parse(content);
 		logMessage("info", json.message);
 		return true;
-	    } catch {
-		logMessage("error", content);
+	    } catch (err) {
+		logMessage("error", "couldn't parse json: " + err);
 		res = false;
 		return false;
 	    }
@@ -647,7 +646,7 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
 
 // read text from server, and add to 'saved text' area with cached audio 
 async function readFromServerAndAddToUttList(session, fName) {
-    var text = await getEditedText(session, fName);
+    let text = await getEditedText(session, fName);
     if (text !== "") {
 	addToUttList(session, fName, text);
 	return true;
@@ -664,9 +663,9 @@ async function readFromServerAndAddToUttList(session, fName) {
 // save text on server, and add to 'saved text' area with cached audio 
 async function saveAndAddToUttList(session, fName, text, isEdited) {
     if (fName !== undefined && fName !== null && text.length > 0) {
-	var savedSpan = document.getElementById(fName);
-	let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
-	let overwrite = !savedIsUndefined;
+	const savedSpan = document.getElementById(fName);
+	const savedIsUndefined = (savedSpan === undefined || savedSpan === null);
+	const overwrite = !savedIsUndefined;
 
 	console.log("saveAndAddToUttList", session, fName, text, isEdited, overwrite);
 
@@ -678,33 +677,33 @@ async function saveAndAddToUttList(session, fName, text, isEdited) {
 
 // add to 'saved text' area with cached audio 
 async function addToUttList(session, fName, text) {
-    var savedSpan = document.getElementById(fName);
-    let savedIsUndefined = (savedSpan === undefined || savedSpan === null);
-    let overwrite = !savedIsUndefined;
+    const savedSpan = document.getElementById(fName);
+    const savedIsUndefined = (savedSpan === undefined || savedSpan === null);
+    const overwrite = !savedIsUndefined;
 
     console.log("addToUttList", session, fName, text);
 
     //if (text.length > 0 && fName !== undefined && fName !== null) {
-	var saved = document.getElementById("saved-utts-table");
-	var textSpan = null;
+	const saved = document.getElementById("saved-utts-table");
+	let textSpan = null;
 	if (overwrite) {
 	    textSpan = savedSpan;
 	} else {
-	    let div = document.createElement("div");
+	    const div = document.createElement("div");
 	    div.setAttribute("class","highlightonhover");
 	    div.setAttribute("title",fName);
 	    textSpan = document.createElement("span")
 	    textSpan.id = fName;
 	    textSpan.setAttribute("style","padding-left: 0.5em;");
-	    let idSpan = document.createElement("span");
+	    const idSpan = document.createElement("span");
 	    idSpan.textContent = " " + shortFilenameBaseFor(fName); // space to make it easier to copy id without text
 	    idSpan.setAttribute("style","vertical-align: top; float: right; text-align: right; font-family: monospace");
-	    let audioSpan = document.createElement("span");
-	    let audio = document.createElement("audio");
-	    let play = "&#9654;";
-	    let pause = "&#9646;&#9646;";
+	    const audioSpan = document.createElement("span");
+	    const audio = document.createElement("audio");
+	    const play = "&#9654;";
+	    const pause = "&#9646;&#9646;";
 	    audioSpan.innerHTML  = "<button style='width: 30px; text-align: center' class='btn black replay'>" + play + "</button>";
-	    let playChar = audioSpan.firstChild.innerHTML;
+	    const playChar = audioSpan.firstChild.innerHTML;
 	    audioSpan.style = "vertical-align: top; text-align: center";
 	    audioSpan.title = "Play";
 	    audioSpan.addEventListener("click", function () {
@@ -759,10 +758,10 @@ function getRecognisedText(sessionName, fName) {
 
 // fetch text from server for the specified session, basename and extension
 async function getText(sessionName, fName, extension) {
-    let url = baseURL + "/get_edited_text/" + sessionName + "/" + fName + "." + extension;
+    const url = baseURL + "/get_edited_text/" + sessionName + "/" + fName + "." + extension;
     let res = "";
     
-    let func = async function() {
+    const func = async function() {
 	
 	const resp = await fetch(url);
 	
@@ -812,15 +811,15 @@ function cacheAudio(audioElement, playPauseButton, url) {
 		    //console.log("resp.data", json.data);
 
     		    // https://stackoverflow.com/questions/16245767/creating-a-blob-from-a-base64-string-in-javascript#16245768
-    		    let byteCharacters = atob(json.data);
+    		    const byteCharacters = atob(json.data);
 		    
-    		    var byteNumbers = new Array(byteCharacters.length);
-    		    for (var i = 0; i < byteCharacters.length; i++) {
+    		    const byteNumbers = new Array(byteCharacters.length);
+    		    for (let i = 0; i < byteCharacters.length; i++) {
     			byteNumbers[i] = byteCharacters.charCodeAt(i);
     		    }
-    		    var byteArray = new Uint8Array(byteNumbers);
+    		    const byteArray = new Uint8Array(byteNumbers);
 		    
-    		    let blob = new Blob([byteArray], {'type' : json.file_type});
+    		    const blob = new Blob([byteArray], {'type' : json.file_type});
     		    audioElement.src = URL.createObjectURL(blob);
 		    
 		}
@@ -854,12 +853,12 @@ function validateSessionName() {
 
 // track text changes and disable save button it the text is unchanged compared to the previously saved version
 function trackTextChanges() {
-    let savedSpan = document.getElementById(filenameBase);
-    let text = document.getElementById("current-utt").value.trim();
+    const savedSpan = document.getElementById(filenameBase);
+    const text = document.getElementById("current-utt").value.trim();
     let savedText = "";
     if (savedSpan !== undefined && savedSpan !== null)
 	savedText = savedSpan.textContent.trim();
-    let textChanged = (savedText !== text);
+    const textChanged = (savedText !== text);
     if (textChanged && filenameBase !== null) 
 	enable(saveTextButton);
     else
@@ -870,6 +869,7 @@ recStartButton.addEventListener("click", async function() {
     console.log("recStartButton clicked");
     recorder.start();
     recognition.start();
+    trackTextChanges();
 });
 
 recCancelButton.addEventListener("click", function() {
@@ -886,6 +886,7 @@ recSendButton.addEventListener("click", async function() {
     sendAudio = true;
     recognition.stop();
     recorder.stop("send");
+    trackTextChanges();
 });
 
 sessionField.addEventListener("keyup", function() { validateSessionName() });
@@ -903,9 +904,10 @@ document.getElementById("current-utt").addEventListener("keyup", function() {
 });
 
 saveTextButton.addEventListener("click", function() {
-    let src = document.getElementById("current-utt");
-    let text = src.value.trim();
+    const src = document.getElementById("current-utt");
+    const text = src.value.trim();
     saveAndAddToUttList(sessionField.value.trim(), filenameBase, text, true);
+    trackTextChanges();
 });
 
 document.getElementById("clear_saved_text").addEventListener("click", function() {
@@ -916,19 +918,19 @@ document.getElementById("clear_saved_text").addEventListener("click", function()
 
 // list file basenames on server
 async function listBasenames(sessionName) {
-    let url = baseURL + "/admin/list/basenames/" + sessionName;
+    const url = baseURL + "/admin/list/basenames/" + sessionName;
     return listFromURL(url, "basenames");
 }
 
 // list file names on server
 async function listFiles(sessionName) {
-    let url = baseURL + "/admin/list/files/" + sessionName;
+    const url = baseURL + "/admin/list/files/" + sessionName;
     return listFromURL(url, "files");
 }
 
 // get list from server url
 async function listFromURL(url, description) {
-    let list = await fetch(url).then( r => {
+    const list = await fetch(url).then( r => {
 	if (!r.ok) throw r
 	return r.json();
     }).then(j => {
@@ -947,14 +949,14 @@ async function listFromURL(url, description) {
 
 document.getElementById("load_saved_text").addEventListener("click", async function() {
     document.getElementById("saved-utts-table").textContent="";
-    let sessionName = sessionField.value.trim();
-    let names = await listFiles(sessionName);
+    const sessionName = sessionField.value.trim();
+    const names = await listFiles(sessionName);
     if (names !== null) {
 	let nLoaded = 0;
-	for (var i=0; i<names.length; i++) {
-	    let fName = names[i];
+	for (let i=0; i<names.length; i++) {
+	    const fName = names[i];
 	    if (fName.endsWith(".webm")) {
-		let baseName = fName.replace(/[.][^.]+$/,"");
+		const baseName = fName.replace(/[.][^.]+$/,"");
 		//console.log(baseName);
 		if (await readFromServerAndAddToUttList(sessionName, baseName)) {
 		    nLoaded++;
@@ -981,7 +983,7 @@ function logMessage(title, text) {
     if (title === "info") {
 	console.log(title, text);
     } else {	
-	var stack = new Error().stack;
+	const stack = new Error().stack;
 	console.log(title, text, stack);
     }
     document.getElementById("messages").textContent = title + ": " + text;    
@@ -995,9 +997,9 @@ function uuidv4() {
 }
 
 function createIssueReport() {
-    let url = "https://github.com/stts-se/chromedictator/issues/new?body=";
-    let prefix = "%0A";
-    //let verticalBar = "%20%7C%20";
+    const url = "https://github.com/stts-se/chromedictator/issues/new?body=";
+    const prefix = "%0A";
+    //const verticalBar = "%20%7C%20";
     window.open(url,'_blank');
 }
 
@@ -1047,10 +1049,10 @@ function globalKeyListener() {
 // ... AND FINALLY SOME FUN!
 
 function breakEverything() {
-    let divs = document.querySelectorAll("div");
-    for (var i = 1; i < divs.length; i++) {
-	var d = divs[i];
-	var c = d.getAttribute("class")
+    const divs = document.querySelectorAll("div");
+    for (let i = 1; i < divs.length; i++) {
+	const d = divs[i];
+	const c = d.getAttribute("class")
 	if (c !== null && c.indexOf("nobreak") < 0)
 	    d.style["transform"] =  "rotate("+ getRandomInt(-180,180) + "deg)";
     }
@@ -1059,9 +1061,9 @@ function breakEverything() {
 }
 
 function unbreakEverything() {
-    let divs = document.querySelectorAll("div");
-    for (var i = 1; i < divs.length; i++) {
-	var d = divs[i];
+    const divs = document.querySelectorAll("div");
+    for (let i = 1; i < divs.length; i++) {
+	const d = divs[i];
 	d.style["transform"] =  "";
     }
     document.getElementById("break_everything").style["display"] = "";
@@ -1069,10 +1071,10 @@ function unbreakEverything() {
 }
 
 function dontClick() {
-    let divs = document.querySelectorAll("div");
-    for (var i = 1; i < divs.length; i++) {
-	var d = divs[i];
-	var c = d.getAttribute("class")
+    const divs = document.querySelectorAll("div");
+    for (let i = 1; i < divs.length; i++) {
+	const d = divs[i];
+	const c = d.getAttribute("class")
 	if (c !== null && c.indexOf("nobreak") < 0)
 	    d.style["animation"] =  "spin "+ getRandomInt(4,12) + "s linear infinite";
     }
@@ -1082,10 +1084,10 @@ function dontClick() {
 }
 
 function toldYouSo() {
-    let divs = document.querySelectorAll("div");
-    for (var i = 1; i < divs.length; i++) {
-	var d = divs[i];
-	var c = d.getAttribute("class")
+    const divs = document.querySelectorAll("div");
+    for (let i = 1; i < divs.length; i++) {
+	const d = divs[i];
+	const c = d.getAttribute("class")
 	if (c !== null && c.indexOf("nobreak") < 0)
 	    d.style["animation"] =  "";
     }
