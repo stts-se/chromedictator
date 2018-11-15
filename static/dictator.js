@@ -83,7 +83,6 @@ document.addEventListener("keyup", function() { globalKeyListener() });
 
 function initMediaAccess() {
     let source;
-    let stream;
     const mediaAccess = navigator.mediaDevices.getUserMedia({'audio': true, video: false});
     
     mediaAccess.then(function(stream) {
@@ -99,15 +98,18 @@ function initMediaAccess() {
 	    document.getElementById("rec_duration").innerHTML = "&nbsp;";
 	    isRecording = false;
 	    console.log("recorder.onstop completed");
+	    trackTextChanges();
 	} 
 	recorder.onerror = function(evt) {
 	    console.log("recorder.onerror");
+	    trackTextChanges();
 	}
 	recorder.onpause = function(evt) {
 	    console.log("recorder.onpause");
 	}
-	recorder.onstart = async function(evt) {
+	recorder.onstart = async function(evt) {	    
 	    console.log("recorder.onstart called");
+	    sendAudio = false;
 	    // save working text if unsaved
 	    const current = document.getElementById("current-utt");
 	    const text = current.value.trim();
@@ -130,7 +132,7 @@ function initMediaAccess() {
 	} 
 	recorder.ondataavailable = async function (evt) {	    
 	    const thisRecStart = new Date(recStartTime).toLocaleString();
-	    console.log("recorder.ondataavailable | sendAudio=" + sendAudio + ", thisRecStart=" + thisRecStart);
+	    console.log("recorder.ondataavailable | sendAudio: " + sendAudio + " | thisRecStart: " + thisRecStart);
 	    recStartTime = null;
 	    document.getElementById("rec_duration").innerHTML = "&nbsp;"; 
 
@@ -205,6 +207,7 @@ function initWebkitSpeechRecognition() {
     recognition.lang = "sv";
     recognition.continuous = true;
     recognition.interimResults = true;
+    recognition.isCancelled = false;
     
     // on result from speech rec
     recognition.onresult = async function(event) {
@@ -217,9 +220,11 @@ function initWebkitSpeechRecognition() {
 		// stop recorder if it's running
 		if (isRecording) {
 		    sendAudio = true;
-		    recorder.stop();
+		    //console.log("recognition.onresult sendAudio", sendAudio);
+		    try {
+			recorder.stop();
+		    } catch(err) {}
 		    recognition.stop();
-		    //recorder.start();
 		}
 		
 	    	finalResponse.value = text.trim();
@@ -237,65 +242,44 @@ function initWebkitSpeechRecognition() {
 	}
     };    
 
-    recognition.onnnomatch = function() {
-	console.log("recognition.onnomatch");
-    }
-    
+    recognition.onnnomatch = function() { console.log("recognition.onnomatch"); }
 
-    recognition.onstart = function() {
-	console.log("recognition.onstart");
-	if (!isRecording) {
+    const startRecorder = function(caller) {
+	console.log("recognition." + caller);
+    	if (!isRecording) {
 	    try {
 		recorder.start();
 	    } catch(err) {}
 	}
+	recognition.isCancelled = false;
     }
-    
-    recognition.onend = function() {
-	console.log("recognition.onend");
+
+    const stopRecorder = function(caller, doSendAudio) {
+	console.log("recognition." + caller);
+	console.log("recognition.stopRecorder | already cancelled: " + recognition.isCancelled);
+	if (!recognition.isCancelled) {
+	    sendAudio = doSendAudio;
+	    recognition.isCancelled = !doSendAudio;
+	}
+	console.log("recognition.stopRecorder | sendAudio: " + sendAudio);
 	if (isRecording) {
 	    try {
 		recorder.stop();
 	    } catch(err) {}
 	}
-    };
-
-    recognition.onsoundstart = function() {
-	console.log("recognition.onsoundstart");
-	if (!isRecording) {
-	    try {
-		recorder.start();
-	    } catch(err) {}
-	}
     }
     
-    recognition.onsoundend = function() {
-	console.log("recognition.onsoundend");
-	if (isRecording) {
-	    try {
-		recorder.stop();
-	    } catch(err) {}
-	}
-    };
+    recognition.onstart = function() { startRecorder("onstart") };
+    recognition.onsoundstart = function() { startRecorder("onsoundstart") };
+    recognition.onspeechstart = function() { startRecorder("onspeechstart") };
 
-    recognition.onspeechstart = function() {
-	console.log("recognition.onspeechstart");
-	if (!isRecording) {
-	    try {
-		recorder.start();
-	    } catch(err) {}
-	}
-    };
-    recognition.onspeechend = function() {
-	console.log("recognition.onspeechend");
-	if (isRecording) {
-	    try {
-		recorder.stop();
-	    } catch(err) {}
-	}
-    };
+    recognition.onend = function() { stopRecorder("onstop", true) };
+    recognition.onsoundend = function() { stopRecorder("onsoundend", true) };
+    recognition.onspeechend = function() { stopRecorder("onspeechend", true) };
     
     recognition.onerror = function(event) {
+	console.log("recognition.onerror");
+	sendAudio = false;
 	if (event.error === 'no-speech') {
 	    logMessage("error", "No speech input");
 	} else if (event.error === 'audio-capture') {
@@ -315,7 +299,8 @@ function initWebkitSpeechRecognition() {
 	}
 	audio.src = "";
 	try {
-	    recorder.stop();
+	    console.log("recognition.onerror | sendAudio: " + sendAudio);
+	    stopRecorder("onerror", false);
 	} catch(err) {}
 	enable(recStartButton);
 	disable(recSendButton);
@@ -647,17 +632,14 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
 // read text from server, and add to 'saved text' area with cached audio 
 async function readFromServerAndAddToUttList(session, fName) {
     let text = await getEditedText(session, fName);
+    if (text === "") { // if no edited text exists, take the auto-recognised text, if available
+	text = await getRecognisedText(session, fName);
+    }
     if (text !== "") {
 	addToUttList(session, fName, text);
 	return true;
-    } else {
-	text = await getRecognisedText(session, fName);
-	if (text !== "") {
-	    addToUttList(session, fName, text);
-	    return true;
-	} else
-	    return false;
-    }
+    } else
+	return false;
 }
 
 // save text on server, and add to 'saved text' area with cached audio 
@@ -876,7 +858,7 @@ recCancelButton.addEventListener("click", function() {
     console.log("recCancelButton clicked");
     sendAudio = false;
     recognition.abort();
-    recorder.stop("cancel");
+    recorder.stop();
     trackTextChanges();
 });
 
@@ -884,8 +866,9 @@ recCancelButton.addEventListener("click", function() {
 recSendButton.addEventListener("click", async function() {    
     console.log("recSendButton clicked");
     sendAudio = true;
+    //console.log("recSendButton.clicked sendAudio", sendAudio);
     recognition.stop();
-    recorder.stop("send");
+    recorder.stop();
     trackTextChanges();
 });
 
