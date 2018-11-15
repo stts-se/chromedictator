@@ -67,7 +67,8 @@ window.onload = function () {
     document.getElementById("current-utt").focus();
 
     const loadFromServer = url.searchParams.get('load_from_server')
-    if (loadFromServer !== null && loadFromServer !== "" && loadFromServer === "true") {
+    if (loadFromServer !== null) {
+	console.log("loading utterances from server for session " + session);
 	document.getElementById("load_saved_text").click();	
     } else {
 	// insert dummy text/audio
@@ -229,6 +230,7 @@ function initWebkitSpeechRecognition() {
 		
 	    	finalResponse.value = text.trim();
 		finalResponse.focus();
+		trackTextChanges();
 	    	tempResponse.innerHTML = "";
 
 		const isEdited = false;
@@ -841,6 +843,7 @@ function trackTextChanges() {
     if (savedSpan !== undefined && savedSpan !== null)
 	savedText = savedSpan.textContent.trim();
     const textChanged = (savedText !== text);
+    console.log("trackTextChanges", savedText, text, textChanged, filenameBase);
     if (textChanged && filenameBase !== null) 
 	enable(saveTextButton);
     else
@@ -951,6 +954,46 @@ document.getElementById("load_saved_text").addEventListener("click", async funct
 	    utts = utts + "s";
 	logMessage("info", "Loaded " + nLoaded + " " + utts + " from server");
     }
+});
+
+
+// Simple API documentation (server API and URL params). A bit messy.
+document.getElementById("api_docs").addEventListener("click", async function() {
+
+    // Server API
+    const serverAPI = await fetch(baseURL+ "/doc").then(function(r) {
+	if (r.ok)
+	    return r.text();
+	else 
+	    logMessage("error","couldn't retreive server docs: " + statusText);
+    }).then(s => { return s.trim().split("\n") });
+
+
+    // URL params
+    const params = ["session - set session name", "load_from_server - load session's utterances from server"];
+
+    // New window
+    const tab = window.open(baseURL);
+    tab.document.url = baseURL;
+    tab.document.write("<html><title>API docs</title><body/></html>");
+    
+    // Fill section
+    let populate = (title, items) => {
+	const h = tab.document.createElement("b");
+	h.textContent = title;
+	const ul = tab.document.createElement("ul");
+	ul.style['list-style-type'] = "none";
+	tab.document.body.appendChild(h);
+	tab.document.body.appendChild(ul);
+	for (let i=0; i<items.length; i++) {
+	    const li = tab.document.createElement("li");
+	    li.textContent = items[i];
+	    ul.appendChild(li);
+	}
+    };
+
+    populate("Server API", serverAPI);
+    populate("URL params", params);    
 });
 
 
