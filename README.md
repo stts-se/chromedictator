@@ -72,7 +72,25 @@ Audio (media) file used by Google Chrome. Can be converted into .wav or other fo
 
 ### .json
 
-Metadata file accompanying the .webm file.
+Metadata file accompanying the .webm file with the following fields:
+
+* session_id : the name of the session
+* start_time : recording start timestamp (ISO format) 
+* end_time : recording end timestamp (ISO format) 
+* time_code_start : recording start time relative to session start time (milliseconds)
+* time_code_end : recording end time relative to session start time (milliseconds)
+
+Sample JSON can be found in audio_files/default/audiotst.json:
+
+    {
+      "session_id": "default",
+      "start_time": "2018-11-16T15:38:00.606Z",
+      "end_time": "2018-11-16T15:38:03.305Z",
+      "time_code_start": 12593,
+      "time_code_end": 15292
+    }
+
+
 
 ### .rec
 
