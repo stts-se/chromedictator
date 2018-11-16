@@ -28,7 +28,7 @@ Go to the following URL in Google Chrome:
      http://localhost:7654
 
 
-The server will create a `audio_files` sub-directory in the corrent direktory if it does not already exist.
+The server will create a `audio_files` sub-directory in the corrent directory if it does not already exist.
 
 The server will create a `abbrevs.gob` file, containing mappings from abbreviations to expanded forms, if it does not already exist.
 
