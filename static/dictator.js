@@ -80,7 +80,7 @@ window.onload = function () {
 	document.getElementById("load_saved_text").click();	
     } else {
 	// insert dummy text/audio
-	readFromServerAndAddToUttList(sessionField.value.trim(), "audiotst");
+	//readFromServerAndAddToUttList(sessionField.value.trim(), "audiotst");
     }
 }
 
