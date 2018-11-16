@@ -24,8 +24,7 @@ visAnalyser.smoothingTimeConstant = 0.85;
 const visCanvas = document.querySelector('.visualiser');
 const visCanvasCtx = visCanvas.getContext("2d");
    
-const refreshTime = new Date().toLocaleString();
-const headerTxt = "<b>STTS | Chrome Dictator | DEMO</b> <br> <em>Refreshed: <span id='refresh_time'>" + refreshTime + "</span></em><br>";
+const headerTxt = "<b style='margin-block-start: 5pt; display: block'>STTS | Chrome Dictator | DEMO</b>";
 const headerOnAir = "<span id='onair'>ON AIR</span>"
 
 const recStartButton = document.getElementById("rec_start");
@@ -37,6 +36,7 @@ const saveTextButton = document.getElementById("save_edited_text");
 
 let filenameBase;
 let recStartTime;
+let sessionStart;
 let isRecording = false;
 let sendAudio = false;
 
@@ -51,6 +51,8 @@ let breakKeywords = {
 // INITIALISATION
 
 window.onload = function () {
+    
+    sessionStart = new Date();
     
     document.getElementById("headertxt").innerHTML = headerTxt;
 
@@ -74,6 +76,8 @@ window.onload = function () {
     
     document.getElementById("current-utt").focus();
 
+    updateSessionClock();
+    
     const loadFromServer = url.searchParams.get('load_from_server')
     if (loadFromServer !== null) {
 	console.log("loading utterances from server for session " + session);
@@ -136,13 +140,13 @@ function initMediaAccess() {
 	    await disable(recStartButton);
 	    await enable(recCancelButton);
 	    await enable(recSendButton);
-	    recStartTime = new Date().getTime();
+	    recStartTime = new Date();
 	    isRecording = true;
 	    console.log("recorder.onstart completed");
 	    logMessage("info", "Recording started");
 	} 
 	recorder.ondataavailable = async function (evt) {	    
-	    const thisRecStart = new Date(recStartTime).toLocaleString();
+	    const thisRecStart = recStartTime;
 	    console.log("recorder.ondataavailable | sendAudio: " + sendAudio + " | thisRecStart: " + thisRecStart);
 	    recStartTime = null;
 	    document.getElementById("rec_duration").innerHTML = "&nbsp;"; 
@@ -154,7 +158,11 @@ function initMediaAccess() {
 	    }
 
 	    if (sendAudio) {
-		const recEnd = new Date().toLocaleString();
+		const thisRecEnd = new Date();
+		const timeCodeStart = thisRecStart.getTime()-sessionStart.getTime();
+		const recStart = thisRecStart.getTime();
+		const recEnd = thisRecEnd.toISOString();
+		const timeCodeEnd = thisRecEnd.getTime()-sessionStart.getTime();
 		
 		const ou = URL.createObjectURL(evt.data);
 		
@@ -173,8 +181,10 @@ function initMediaAccess() {
 			"data" : btoa(rez),
 			"file_extension" : blob.type,
 			"over_write" : false,
-			"start_time": thisRecStart,
+			"start_time": thisRecStart.toISOString(),
 			"end_time": recEnd,
+			"time_code_start": timeCodeStart,
+			"time_code_end": timeCodeEnd,
 		    };
 		    soundToServer(payload);
 		});
@@ -408,12 +418,11 @@ function updateAbbrevTable() {
     td2.innerHTML = "<input id='abbrev_add_value' style='height: 20pt; font-size: 100%'/>";
     td3.setAttribute("class","abbrev_row_add");
     td3.setAttribute("style","vertical-align: middle");
-    const add = document.createElement('button');
+    const add = document.createElement('span');
     add.setAttribute("title", "add");
     add.setAttribute("class", "btn");
     add.setAttribute("style","vertical-align: middle; padding: .2rem .75rem;");
     add.innerHTML = "Add new";
-    //add.setAttribute("style","background: none; vertical-align: middle; text-align: center; border: none; width: 100%; height: 100%");
     td3.appendChild(add);
     
     tr.appendChild(td1);
@@ -521,7 +530,8 @@ function visualize() {
     
     const draw = function() {
 	if (recStartTime !== undefined && recStartTime !== null) {
-	    const recDur = new Date().getTime() - recStartTime;
+	    const now = new Date();
+	    const recDur = now.getTime() - recStartTime.getTime();
 	    document.getElementById("rec_duration").textContent = Math.floor(recDur/1000) + "s";
 	}
     
@@ -870,7 +880,7 @@ function trackTextChanges() {
     if (savedSpan !== undefined && savedSpan !== null)
 	savedText = savedSpan.textContent.trim();
     const textChanged = (savedText !== text);
-    console.log("trackTextChanges", savedText, text, textChanged, filenameBase);
+    //console.log("trackTextChanges", savedText, text, textChanged, filenameBase);
     if (textChanged && filenameBase !== null) 
 	enable(saveTextButton);
     else
@@ -926,6 +936,12 @@ saveTextButton.addEventListener("click", function() {
 document.getElementById("clear_saved_text").addEventListener("click", function() {
     document.getElementById("saved-utts-table").textContent="";
     logMessage("info", "Cleared text view");
+});
+
+document.getElementById("reset_session_timer").addEventListener("click", function() {
+    sessionStart = new Date();
+    updateSessionClock();
+    logMessage("info", "Session timer has been reset to " + sessionStart.toISOString());
 });
 
 
@@ -1002,7 +1018,7 @@ document.getElementById("api_docs").addEventListener("click", async function() {
     // New window
     const tab = window.open(baseURL);
     tab.document.url = baseURL;
-    tab.document.write("<html><title>API docs</title><body/></html>");
+    tab.document.write("<html><head><meta charset='utf-8'><link rel='stylesheet' type='text/css' href='layout.css'><link rel='stylesheet' type='text/css' href='look.css'><title>API docs</title><body/></html>");
     
     // Fill section
     let populate = (title, items) => {
@@ -1028,6 +1044,13 @@ document.getElementById("api_docs").addEventListener("click", async function() {
 // ------------------
 // UTILS
 
+function updateSessionClock() {
+    const now = new Date();
+    const durMillis = now.getTime() - sessionStart.getTime();
+    const durSeconds = Math.floor(durMillis/1000);
+    document.getElementById("session_duration").textContent = "[" + durSeconds + "s]";
+    var t = setTimeout(updateSessionClock, 500);
+}
 function addClass(element, className) {
     const classes = element.className.split(/ +/);
     if (!classes.includes(className)) {
@@ -1108,8 +1131,7 @@ function globalKeyListener() {
     if (event.keyCode === keyCodeEscape && !recCancelButton.disabled) {
 	recCancelButton.click();
     }
-    if (// event.keyCode === keyCodeEnter || 
-	event.ctrlKey && event.keyCode === keyCodeSpace) {
+    if (event.ctrlKey && event.keyCode === keyCodeSpace) {
 	if (!recSendButton.disabled)
 	    recSendButton.click();
 	else if  (!recStartButton.disabled) {

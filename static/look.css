@@ -97,22 +97,18 @@
 }
 
 .btn.black:hover:not(:disabled) {
-    /* background: black;
-       color: white; */
-    background: white;
-    color: black;
-    border: 1pt solid transparent;
-    border-color: black !important;
+    color: #007bff;
+    background: none;
 }
 
 .btn.red:hover:not(:disabled) {
-    background: red;
-    color: white;
+    background: none;
+    color: #007bff;
 }
 
 .icon {
     border: none;
-    padding: 0 .4rem .3rem .4rem;
+    padding: 0 .4rem .3rem .4rem;    
 }
 
 .replay {
@@ -123,7 +119,7 @@
 
 .btn.red {
     color: red;
-    backgroun
+    background: none;
 }
 
 .btn.black {
@@ -171,7 +167,7 @@
 
 #onair {
     border-radius: .35rem;
-    padding: 1rem 4rem 1rem 4rem;
+    padding: 1rem 7rem 1rem 7rem;
     font-weight: 550;
     letter-spacing: 3px;
     font-size: 180%;
@@ -185,3 +181,8 @@
        animation-name: toggle-text-weight;
        animation-duration: 4s;
        } */
+}
+
+ul {
+    margin-block-start: 4pt !important;
+}

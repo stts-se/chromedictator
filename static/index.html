@@ -13,9 +13,6 @@
 	    
 	    <div class="header content panel">
 		<div class="headertxt" id="headertxt">
-		    <b>STTS | Chrome Dictator | DEMO</b>
-		    <br>
-		    <em>Refreshed: <span id="refresh_time"></span></em><br>
 		</div>
 	    </div>
 
@@ -23,10 +20,17 @@
 
 		<div style="background: white">  <!-- ugly! needed to insert this to fill up all the space with grey background, but still have white gap between the settings and audio panel -->
 		    <div class="settings panel">
-			<div class="title">Settings</div>
-			
+			<div class="title">Settings</div>			
 			<div class="content">
-			    <div style="padding-bottom: 0.5em" class="session">Session name <input id="sessionname" class="selected-font" value="default"/></div>
+			    <div style="padding-bottom: 0.5em" class="session">
+				Session
+				<span style="float: right">
+				    <span style="font-size: 80%" title="Duration of session" id="session_duration"></span>
+				    <span class="btn icon black" style="padding:0" title="Reset session timer" id="reset_session_timer">&#8634;</span>
+				</span>
+				    <input id="sessionname" class="selected-font" value="default"/>
+				<!-- <span>Start session</span> -->
+			    </div>
 			    
 			    <div class="language">Language <br/>
 				<select class="dropdown" id="lang_select">
@@ -43,12 +47,12 @@
 			<div class="title">Audio</div>
 			<div class="content">
 			    <canvas class="visualiser"></canvas> 	
-			    <div id="rec_duration">&nbsp;</div> 	
+			    <div style="font-size: 80%; padding-bottom: 3pt;" id="rec_duration">&nbsp;</div> 	
 			    <audio id="audio" controls disabled></audio>
 			    <div class="buttons">
-				<button title="Ctrl-Space" class="btn" id="rec_start">Rec</button>
-				<button title="Ctrl-Space" class="btn" id="rec_send">Send</button>
-				<button title="Escape" class="btn" id="rec_cancel">Cancel</button>
+				<button title="Start recording [Ctrl-Space]" class="btn" id="rec_start">Rec</button>
+				<button title="Send recording [Ctrl-Space]" class="btn" id="rec_send">Send</button>
+				<button title="Cancel recording [Escape]" class="btn" id="rec_cancel">Cancel</button>
 			    </div>
 			</div>
 		    </div>
@@ -62,8 +66,8 @@
 			<div style="vertical-align: middle; padding-right: 1em" id="saved-utts">
 			    <span style="vertical-align: middle" class="title">
 				Saved text
-				<button style="vertial-align: middle; padding: 0.5pt 0 0 0" id="clear_saved_text" class="btn icon red" title="Clear text view">&#x2612;</button>
-				<button style="display: none; vertial-align: middle; padding: 0.5pt 0 0 0" id="load_saved_text" class="btn icon" title="Load from server">&#8634;</button>
+				<span style="vertial-align: middle; padding: 0.5pt 0 0 0" id="clear_saved_text" class="btn icon red" title="Clear text view">&#x2612;</span>
+				<span style="display: none; vertial-align: middle; padding: 0.5pt 0 0 0" id="load_saved_text" class="btn icon" title="Load from server">&#8634;</span>
 			    </span>
 			    <span style="vertical-align: middle; float: right; padding-right: 2em" class="title">ID</span>
 			    <div id="saved-utts-table" style="height: 300px; margin-left: 1em; padding-right: 1em" class="content resizable">
@@ -120,7 +124,7 @@
 		    <!-- <div class="content"> -->
 			<span class="docs">
 			    <span id="api_docs" class="btn">API docs</span>
-			    <a class="btn" target="_blank" href="https://github.com/stts-se/chromedictator">Code</a>
+			    <a title="github.com/stts-se/chromedictator" class="btn" target="_blank" href="https://github.com/stts-se/chromedictator">Code</a>
 			    <span id="report_issue" class="btn" title="Requires github.com account">Report issue</span>
 			</span>
 			

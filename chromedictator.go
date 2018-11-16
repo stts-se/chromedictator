@@ -37,25 +37,32 @@ type Abbrev struct {
 
 // TextObject holds values that can be used to produce a text file
 type TextObject struct {
-	SessionID string `json:"session_id"`
+	JSONObject
 	FileName  string `json:"file_name"`
 	Data      string `json:"data"`
 	OverWrite bool   `json:"over_write"`
 }
 
-// audioJSON holds values that can be used to produce a json file with a recording's metadata
-type audioJSON struct {
+// JSONObject holds values that can be used to produce a json file with a recording's metadata
+type JSONObject struct {
 	SessionID string `json:"session_id"`
-	//FileName  string `json:"file_name"`
+
+	// StartTime: start time (human readable text)
 	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
+
+	// TimeCodeEnd: end time (human readable text)
+	EndTime string `json:"end_time"`
+
+	// TimeCodeStart: start time in milliseconds, relative to session start
+	TimeCodeStart int64 `json:"time_code_start"`
+
+	// EndTime: end time in milliseconds, relative to session start
+	TimeCodeEnd int64 `json:"time_code_end"`
 }
 
 // AudioObject holds values that can be used to produce an audio file
 type AudioObject struct {
 	TextObject
-	StartTime     string `json:"start_time"`
-	EndTime       string `json:"end_time"`
 	FileExtension string `json:"file_extension"`
 }
 
@@ -65,14 +72,14 @@ type RequestResponse struct {
 }
 
 type audioResponse struct {
-	audioJSON
+	JSONObject
 	FileType string `json:"file_type"`
 	Data     string `json:"data"`
 	Message  string `json:"message"`
 }
 
 type textResponse struct {
-	audioJSON
+	JSONObject
 	FileType string `json:"file_type"`
 	Text     string `json:"text"`
 	Message  string `json:"message"`
@@ -330,20 +337,37 @@ func deleteAbbrev(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "deleted abbbreviation '%s'\n", abbrev)
 }
 
-func (ao TextObject) validate() []string {
+func (to TextObject) validate() []string {
 	var res []string
-
-	if ao.SessionID == "" {
+	if to.SessionID == "" {
 		res = append(res, "missing session_id")
 	}
-	if ao.FileName == "" {
+	if to.FileName == "" {
 		res = append(res, "missing file_name")
-
 	}
-	if ao.Data == "" {
+	if to.Data == "" {
 		res = append(res, "missing data")
 	}
+	return res
+}
 
+func (jo JSONObject) validate() []string {
+	res := []string{}
+	if jo.SessionID == "" {
+		res = append(res, "missing session_id")
+	}
+	if jo.StartTime == "" {
+		res = append(res, "missing start_time")
+	}
+	if jo.EndTime == "" {
+		res = append(res, "missing end_time")
+	}
+	if jo.TimeCodeStart < 0 {
+		res = append(res, "missing time_code_start")
+	}
+	if jo.TimeCodeEnd <= 0 {
+		res = append(res, "missing time_code_end")
+	}
 	return res
 }
 
@@ -351,12 +375,6 @@ func (ao AudioObject) validate() []string {
 	res := ao.TextObject.validate()
 	if ao.FileExtension == "" {
 		res = append(res, "missing file_extension")
-	}
-	if ao.StartTime == "" {
-		res = append(res, "missing start_time")
-	}
-	if ao.EndTime == "" {
-		res = append(res, "missing end_time")
 	}
 	return res
 }
@@ -408,8 +426,8 @@ func getRecogniserText(w http.ResponseWriter, r *http.Request) {
 	getText(w, r, "rec")
 }
 
-func readJSONFile(fileName string) (audioJSON, error) {
-	res := audioJSON{}
+func readJSONFile(fileName string) (JSONObject, error) {
+	res := JSONObject{}
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		return res, fmt.Errorf("no such file: %s", fileName)
 	}
@@ -470,14 +488,14 @@ func getText(w http.ResponseWriter, r *http.Request, defaultExt string) {
 	if _, err := os.Stat(jsonFile); os.IsNotExist(err) {
 		log.Printf("No json file for basename %s", basename)
 	} else {
-		audioJSON, err := readJSONFile(jsonFile)
+		JSONObject, err := readJSONFile(jsonFile)
 		if err != nil {
 			msg := fmt.Sprintf("get_text: failed to read json file : %v", err)
 			log.Print(msg)
 			http.Error(w, msg, http.StatusInternalServerError)
 			return
 		}
-		res.audioJSON = audioJSON
+		res.JSONObject = JSONObject
 	}
 
 	resJSON, err := rec.PrettyMarshal(res)
@@ -589,8 +607,9 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 	to := TextObject{}
 	err := json.Unmarshal(data, &to)
 	if err != nil {
-		msg := fmt.Sprintf("failed to unmarshal incoming JSON '%s' : %v", string(data), err)
+		msg := fmt.Sprintf("failed to unmarshal incoming JSON : %v", err)
 		log.Println("[chromedictator] " + msg)
+		//log.Printf("[chromedictator] incoming JSON string : %s\n", string(body))
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
@@ -664,7 +683,7 @@ func saveText(w http.ResponseWriter, r *http.Request, ext string) {
 
 }
 
-func writeJSON(jsonFilePath string, jsonObj audioJSON, overwrite bool) ([]string, error) {
+func writeJSON(jsonFilePath string, jsonObj JSONObject, overwrite bool) ([]string, error) {
 	respMessages := []string{}
 	jsonPretty, err := prettyMarshal(jsonObj)
 	if _, err := os.Stat(jsonFilePath); !os.IsNotExist(err) {
@@ -730,7 +749,7 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		msg := fmt.Sprintf("failed to unmarshal incoming JSON : %v", err)
 		log.Println("[chromedictator] " + msg)
-		log.Printf("[chromedictator] incoming JSON string : %s\n", string(body))
+		//log.Printf("[chromedictator] incoming JSON string : %s\n", string(body))
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
@@ -766,10 +785,12 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 		respMessages = append(respMessages, msg)
 	}
 
-	jsonObj := audioJSON{
-		SessionID: ao.SessionID,
-		StartTime: ao.StartTime,
-		EndTime:   ao.EndTime,
+	jsonObj := JSONObject{
+		SessionID:     ao.SessionID,
+		StartTime:     ao.StartTime,
+		EndTime:       ao.EndTime,
+		TimeCodeStart: ao.TimeCodeStart,
+		TimeCodeEnd:   ao.TimeCodeEnd,
 	}
 	jsonFilePath := path.Join(baseDir, ao.SessionID, ao.FileName) + ".json"
 	jsonResps, err := writeJSON(jsonFilePath, jsonObj, ao.OverWrite)
