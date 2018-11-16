@@ -184,7 +184,7 @@
 #onair {
     border-radius: .35rem;
     padding: 1rem 7rem 1rem 7rem;
-    font-weight: 550;
+    font-weight: bold;
     letter-spacing: 3px;
     font-size: 180%;
 
@@ -196,8 +196,7 @@
 }
 
 ul {
-    margin-block-start: 4pt !important;
-    /* margin-block-end: 4pt !important; */
+    margin-block-start: 4pt !important; /* override chrome settings */
 }
 
 
@@ -229,8 +228,8 @@ ul {
     height: fit-content;
     padding: 1rem 1rem 0rem 1rem;
     text-align:left;
-    animation-name: fadeIn;
-    animation-duration: 0.5s
+    animation-name: fadeIn !important;
+    animation-duration: 0.5s !important;
 }
 
 

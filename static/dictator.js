@@ -1062,21 +1062,23 @@ document.getElementById("api_docs").addEventListener("click", async function() {
 // ------------------
 // MODAL
 
-const modal = document.getElementById('modal_takeover');
-const modalClose = document.getElementById("modal_close");
+document.getElementById("modal_close").onclick = closeModal;
 
 function closeModal() {
+    const modal = document.getElementById('modal_takeover');
     clearModal();
     modal.style["visibility"] = "hidden";
     modal.style["display"] = "none";
 }
 
 function openModal() {
+    const modal = document.getElementById('modal_takeover');
     modal.style["visibility"] = "visible";
     modal.style["display"] = "grid";
 }
 
 function toggleModal() {
+    const modal = document.getElementById('modal_takeover');
     if (modal.style["visibility"] === "hidden") {
 	openModal();
     } else {
@@ -1100,10 +1102,9 @@ function modalDialog(title, content) {
     openModal();
 }
 
-modalClose.onclick = closeModal;
-
 // When the user clicks anywhere outside of the modal, close it
 window.onclick = function(event) {
+    const modal = document.getElementById('modal_takeover');
     if (event.target == modal) 
 	closeModal();
 }
