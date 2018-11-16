@@ -1018,23 +1018,20 @@ document.getElementById("api_docs").addEventListener("click", async function() {
     // URL params
     const params = ["session - set session name", "load_from_server - load session's utterances from server"];
 
-    // New window
-    const tab = window.open(baseURL);
-    tab.document.url = baseURL;
-    tab.document.write("<html><head><meta charset='utf-8'><link rel='stylesheet' type='text/css' href='layout.css'><link rel='stylesheet' type='text/css' href='look.css'><title>API docs</title><body/></html>");
+    const body = document.createElement("span");
     
     // Fill section
     let populate = (title, items, withLink) => {
-	const h = tab.document.createElement("b");
+	const h = document.createElement("b");
 	h.textContent = title;
-	const ul = tab.document.createElement("ul");
+	const ul = document.createElement("ul");
 	ul.style['list-style-type'] = "none";
-	tab.document.body.appendChild(h);
-	tab.document.body.appendChild(ul);
+	body.appendChild(h);
+	body.appendChild(ul);
 	for (let i=0; i<items.length; i++) {
-	    const li = tab.document.createElement("li");
+	    const li = document.createElement("li");
 	    if (withLink) {
-		const a = tab.document.createElement("a");
+		const a = document.createElement("a");
 		a.textContent = items[i];
 		a.href = items[i];
 		li.appendChild(a);
@@ -1049,8 +1046,67 @@ document.getElementById("api_docs").addEventListener("click", async function() {
     populate("Main application", mainApp, true);
     populate("URL params", params);    
     populate("Server API", serverAPI);
+
+    // Modal
+    modalDialog("API docs",body);
+    
+    // New window
+    // const tab = window.open(baseURL);
+    // tab.document.url = baseURL;
+    // tab.document.write("<html><head><meta charset='utf-8'><link rel='stylesheet' type='text/css' href='layout.css'><link rel='stylesheet' type='text/css' href='look.css'><title>API docs</title><body id='body'/></html>");
+    // tab.document.getElementById("body").appendChild(body);
+
 });
 
+
+// ------------------
+// MODAL
+
+const modal = document.getElementById('modal_takeover');
+const modalClose = document.getElementById("modal_close");
+
+function closeModal() {
+    clearModal();
+    modal.style["visibility"] = "hidden";
+    modal.style["display"] = "none";
+}
+
+function openModal() {
+    modal.style["visibility"] = "visible";
+    modal.style["display"] = "grid";
+}
+
+function toggleModal() {
+    if (modal.style["visibility"] === "hidden") {
+	openModal();
+    } else {
+	closeModal();
+    }
+}
+
+function clearModal() {
+    document.getElementById("modal_title").innerHTML = "";
+    document.getElementById("modal_body").innerHTML = "";
+}
+
+function modalDialog(title, content) {
+    clearModal();
+    document.getElementById("modal_title").textContent = title;
+    const body = document.getElementById("modal_body");
+    if (content.constructor.name === "String")
+	body.textContent = content;
+    else
+	body.appendChild(content);
+    openModal();
+}
+
+modalClose.onclick = closeModal;
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function(event) {
+    if (event.target == modal) 
+	closeModal();
+}
 
 
 // ------------------
@@ -1063,14 +1119,13 @@ function updateSessionClock() {
     document.getElementById("session_duration").textContent = "[" + durSeconds + "s]";
     var t = setTimeout(updateSessionClock, 500);
 }
+
 function addClass(element, className) {
     const classes = element.className.split(/ +/);
     if (!classes.includes(className)) {
 	classes.push(className);
-	console.log(classes);
 	element.className = classes.join(" ");
     }
-    console.log(element);
 }
 
 function removeClass(element, className) {
@@ -1078,10 +1133,8 @@ function removeClass(element, className) {
     var index = classes.indexOf(className);
     if (index > -1) {
 	classes.splice(index, 1); // remove 1 items from index
-	console.log(classes);
 	element.className = classes.join(" ");
     }
-    console.log(element);
 }
 
 function scrollDown(element) {

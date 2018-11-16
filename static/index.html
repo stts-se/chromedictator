@@ -9,6 +9,20 @@
 
     <body>
 
+	<!-- Modal dialog -->
+	<div class="selected-font content resizable" id="modal_takeover" style="visibility: hidden; display: none">
+	    <div id="modal_content" class="panel">
+		<div id="modal_header">		
+		    <span id="modal_close" title="Close dialog" class="btn icon" style="font-size: 80%; float: right">&times;</span>
+		    <span id="modal_title"></span>
+		    <hr/>
+		</div>
+		
+		<div id="modal_body"></div>
+	    </div>
+	</div>
+
+	</div>
 	<div class="application selected-font">
 	    
 	    <div class="header content panel">
@@ -28,7 +42,7 @@
 				    <span style="font-size: 80%" title="Duration of session" id="session_duration"></span>
 				    <span class="btn icon black" style="padding:0" title="Reset session stopwatch" id="reset_session_stopwatch">&#8634;</span>
 				</span>
-				    <input id="sessionname" class="selected-font" value="default"/>
+				<input id="sessionname" class="selected-font" value="default"/>
 				<!-- <span>Start session</span> -->
 			    </div>
 			    
@@ -60,6 +74,7 @@
 	    </div>
 	    
 	    <div class="centerpane">
+
 		<div class="textpane panel">
 		    <div style="margin-bottom: 20px">
 			
@@ -149,7 +164,7 @@
 		    <button style="display: none" id="toldyouso">Told you so!</button>
 		</div>
 	    </div>
-	</div>
+	</div>		
 	
     </body>
 

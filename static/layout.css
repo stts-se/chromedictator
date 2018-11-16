@@ -12,6 +12,7 @@
 
 
 /* MAIN SECTIONS */
+
 .header {
     grid-column:2/4;
     grid-row:1;
@@ -55,6 +56,7 @@
 
 
 /* CENTERPANE */
+
 .text {
     grid-column: 1;
     grid-row: 1;
