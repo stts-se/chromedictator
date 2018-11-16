@@ -34,11 +34,7 @@ The server will create a `abbrevs.gob` file, containing mappings from abbreviati
 
 ## Run from pre-built binaries
 
-Download the tar file from 
-
-     https://github.com/stts-se/chromedictator/releases
-
-unzip, and run the binary for your OS.
+Download the latest zip file from [releases](https://github.com/stts-se/chromedictator/releases), unzip, and run the binary for your OS.
 
 ## Build and package pre-compiled version
 
