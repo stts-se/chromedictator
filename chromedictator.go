@@ -21,10 +21,13 @@ import (
 	"github.com/stts-se/rec"
 )
 
-// TODO Hardwired GOB file should be changed to text file
-var abbrevFilePath = "abbrevs.gob"
+// TODO Hardwired GOB file should be changed to manually editable text file
+var abbrevFilePath = path.Join(baseDir, "abbrevs.gob")
 var abbrevs = make(map[string]string)
 var abbrevMutex = &sync.RWMutex{}
+
+// TODO Add  command line flag
+var baseDir = "audio_files" // This is where the session sub-dirs live
 
 // Abbrev is a tuple holding an abbreviation and its expansion.
 type Abbrev struct {
@@ -836,9 +839,6 @@ func generateDoc(w http.ResponseWriter, r *http.Request) {
 	s := strings.Join(walkedURLs, "\n")
 	fmt.Fprintf(w, "%s\n", s)
 }
-
-// TODO Add  command line flag
-var baseDir = "audio_files"
 
 func main() {
 
