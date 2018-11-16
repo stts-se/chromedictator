@@ -938,10 +938,10 @@ document.getElementById("clear_saved_text").addEventListener("click", function()
     logMessage("info", "Cleared text view");
 });
 
-document.getElementById("reset_session_timer").addEventListener("click", function() {
+document.getElementById("reset_session_stopwatch").addEventListener("click", function() {
     sessionStart = new Date();
     updateSessionClock();
-    logMessage("info", "Session timer has been reset to " + sessionStart.toISOString());
+    logMessage("info", "Session stopwatch has been reset");
 });
 
 
@@ -1010,8 +1010,11 @@ document.getElementById("api_docs").addEventListener("click", async function() {
 	else 
 	    logMessage("error","couldn't retreive server docs: " + statusText);
     }).then(s => { return s.trim().split("\n") });
+    
 
-
+    // MAIN application
+    const mainApp = [baseURL];
+    
     // URL params
     const params = ["session - set session name", "load_from_server - load session's utterances from server"];
 
@@ -1021,7 +1024,7 @@ document.getElementById("api_docs").addEventListener("click", async function() {
     tab.document.write("<html><head><meta charset='utf-8'><link rel='stylesheet' type='text/css' href='layout.css'><link rel='stylesheet' type='text/css' href='look.css'><title>API docs</title><body/></html>");
     
     // Fill section
-    let populate = (title, items) => {
+    let populate = (title, items, withLink) => {
 	const h = tab.document.createElement("b");
 	h.textContent = title;
 	const ul = tab.document.createElement("ul");
@@ -1030,13 +1033,22 @@ document.getElementById("api_docs").addEventListener("click", async function() {
 	tab.document.body.appendChild(ul);
 	for (let i=0; i<items.length; i++) {
 	    const li = tab.document.createElement("li");
-	    li.textContent = items[i];
-	    ul.appendChild(li);
+	    if (withLink) {
+		const a = tab.document.createElement("a");
+		a.textContent = items[i];
+		a.href = items[i];
+		li.appendChild(a);
+		ul.appendChild(li);
+	    } else {
+		li.textContent = items[i];
+		ul.appendChild(li);
+	    }
 	}
     };
 
-    populate("Server API", serverAPI);
+    populate("Main application", mainApp, true);
     populate("URL params", params);    
+    populate("Server API", serverAPI);
 });
 
 
