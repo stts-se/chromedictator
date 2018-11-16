@@ -1144,13 +1144,20 @@ function unbreakEverything() {
     document.getElementById("unbreak_everything").style["display"] = "none";
 }
 
+
 function dontClick() {
     const divs = document.querySelectorAll("div");
     for (let i = 1; i < divs.length; i++) {
 	const d = divs[i];
 	const c = d.getAttribute("class")
-	if (c !== null && c.indexOf("nobreak") < 0)
-	    d.style["animation"] =  "spin "+ getRandomInt(4,12) + "s linear infinite";
+	if (c !== null && c.indexOf("nobreak") < 0) {
+	    let spin = "spin";
+	    let s = getRandomInt(0,1);
+	    if (s === 1) {
+		spin = "spin_anti";
+	    };
+	    d.style["animation"] =  spin+ " "+ getRandomInt(4,12) + "s linear infinite";
+	}
     }
     
     document.getElementById("dontclick").style["display"] = "none";
