@@ -42,7 +42,6 @@
     border-color: black !important;
     border: 1pt solid transparent;
     /* border-color: #007bff !important; */
-    border-radius: .25rem;
     display: inline-block;
     font-weight: 400;
     text-align: center;
@@ -154,3 +153,17 @@
 }
 
 
+#onair {
+    /* background: red; */
+    /* color: black; */
+    background: black;
+    color: red;
+    border-radius: .35rem;
+    padding: 1rem 4rem 1rem 4rem;
+    font-weight: 550;
+    text-shadow: 
+        -1px 0 red, 0 1px red, 1px 0 red, 0 -1px red, 
+        -1px -1px red, 1px 1px red, -1px 1px red, 1px -1px red;
+    letter-spacing: 3px;
+    font-size: 180%;
+}

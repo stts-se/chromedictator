@@ -23,6 +23,10 @@ visAnalyser.smoothingTimeConstant = 0.85;
 
 const visCanvas = document.querySelector('.visualiser');
 const visCanvasCtx = visCanvas.getContext("2d");
+   
+const refreshTime = new Date().toLocaleString();
+const headerTxt = "<b>STTS | Chrome Dictator | DEMO</b> <br> <em>Refreshed: <span id='refresh_time'>" + refreshTime + "</span></em><br>";
+const headerOnAir = "<span id='onair'>ON AIR</span>"
 
 const recStartButton = document.getElementById("rec_start");
 const recSendButton = document.getElementById("rec_send");
@@ -37,14 +41,19 @@ let isRecording = false;
 let sendAudio = false;
 
 let abbrevMap = {};
+let breakKeywords = {
+    "punkt": ".",
+    "frågetecken": "?",
+};
 
 
 // ------------------
 // INITIALISATION
 
 window.onload = function () {
-
-    document.getElementById("refresh_time").innerText = new Date().toLocaleString();
+    
+    document.getElementById("headertxt").innerHTML = headerTxt;
+    //document.getElementById("refresh_time").innerHTML = refreshTime;
 
     const url = new URL(document.URL);
     const session = url.searchParams.get('session')
@@ -92,6 +101,8 @@ function initMediaAccess() {
         source.connect(visAnalyser);
 	recorder = new MediaRecorder(stream);
 	recorder.onstop = function(evt) {
+	    document.getElementById("headertxt").innerHTML = headerTxt;
+	    removeClass(document.getElementById("headertxt"), "onair");
 	    console.log("recorder.onstop called");
 	    enable(recStartButton);
 	    disable(recCancelButton);
@@ -108,7 +119,10 @@ function initMediaAccess() {
 	recorder.onpause = function(evt) {
 	    console.log("recorder.onpause");
 	}
-	recorder.onstart = async function(evt) {	    
+	recorder.onstart = async function(evt) {
+	    document.getElementById("headertxt").innerHTML = headerOnAir;
+	    addClass(document.getElementById("headertxt"), "onair");
+	    
 	    console.log("recorder.onstart called");
 	    sendAudio = false;
 	    // save working text if unsaved
@@ -207,39 +221,56 @@ function initWebkitSpeechRecognition() {
     finalResponse.addEventListener('keyup', checkForAbbrev);
     recognition.lang = "sv";
     recognition.continuous = true;
+    //recognition.continuous = false;
     recognition.interimResults = true;
     recognition.isCancelled = false;
+
+    const doRecBreak = async function(recognisedText) {
+	const wds = recognisedText.split(/ +/);
+	const lastWd = wds[wds.length-1];
+	const replacement = breakKeywords[lastWd];
+	if (replacement !== undefined && replacement !== null)
+	    wds[wds.length-1] = replacement;
+	const text = wds.join(" ");
+	console.log("doRecBreak new text", text);
+	
+	// stop recorder if it's running
+	if (isRecording) {
+	    sendAudio = true;
+	    //console.log("recognition.onresult sendAudio", sendAudio);
+	    try {
+		recorder.stop();
+	    } catch(err) {}
+	    recognition.stop();
+	}
+	
+	finalResponse.value = text.trim();
+	finalResponse.focus();
+	trackTextChanges();
+	tempResponse.innerHTML = "";
+	
+	const isEdited = false;
+	const overwrite = false;
+	await textToServer(sessionField.value.trim(), filenameBase, text.trim(), isEdited, overwrite);
+    }
     
     // on result from speech rec
-    recognition.onresult = async function(event) {
+    recognition.onresult = function(event) {
 	//console.log("recognition.onresult");
 	for (let i = event.resultIndex; i < event.results.length; ++i) {
-	    const text = event.results[i][0].transcript.trim();
+	    const text = event.results[i][0].transcript.trim();	    
 	    if (event.results[i].isFinal) {
 		console.log("recognition.onresult final");
-
-		// stop recorder if it's running
-		if (isRecording) {
-		    sendAudio = true;
-		    //console.log("recognition.onresult sendAudio", sendAudio);
-		    try {
-			recorder.stop();
-		    } catch(err) {}
+		doRecBreak(text);
+	    } else {
+		tempResponse.innerHTML = text;
+		const wds = text.split(/ +/);
+		const lastWd = wds[wds.length-1];
+		const replacement = breakKeywords[lastWd];
+		if (replacement !== undefined && replacement !== null) {
+		    console.log("recognition.onresult received break keyword: " + text + " => " + replacement);
 		    recognition.stop();
 		}
-		
-	    	finalResponse.value = text.trim();
-		finalResponse.focus();
-		trackTextChanges();
-	    	tempResponse.innerHTML = "";
-
-		const isEdited = false;
-		const overwrite = false;
-		await textToServer(sessionField.value.trim(), filenameBase, text.trim(), isEdited, overwrite);
-		
-				
-	    } else {
-		tempResponse.innerHTML = event.results[i][0].transcript.trim();
 	    }
 	}
     };    
@@ -493,7 +524,7 @@ function visualize() {
     visCanvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
     
     const draw = function() {
-	if (recStartTime !== null) {
+	if (recStartTime !== undefined && recStartTime !== null) {
 	    const recDur = new Date().getTime() - recStartTime;
 	    document.getElementById("rec_duration").textContent = Math.floor(recDur/1000) + "s";
 	}
@@ -1000,6 +1031,27 @@ document.getElementById("api_docs").addEventListener("click", async function() {
 
 // ------------------
 // UTILS
+
+function addClass(element, className) {
+    const classes = element.className.split(/ +/);
+    if (!classes.includes(className)) {
+	classes.push(className);
+	console.log(classes);
+	element.className = classes.join(" ");
+    }
+    console.log(element);
+}
+
+function removeClass(element, className) {
+    const classes = element.className.split(/ +/);
+    var index = classes.indexOf(className);
+    if (index > -1) {
+	classes.splice(index, 1); // remove 1 items from index
+	console.log(classes);
+	element.className = classes.join(" ");
+    }
+    console.log(element);
+}
 
 function scrollDown(element) {
     element.scrollTop = element.scrollHeight;
