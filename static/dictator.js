@@ -53,7 +53,6 @@ let breakKeywords = {
 window.onload = function () {
     
     document.getElementById("headertxt").innerHTML = headerTxt;
-    //document.getElementById("refresh_time").innerHTML = refreshTime;
 
     const url = new URL(document.URL);
     const session = url.searchParams.get('session')
@@ -102,7 +101,6 @@ function initMediaAccess() {
 	recorder = new MediaRecorder(stream);
 	recorder.onstop = function(evt) {
 	    document.getElementById("headertxt").innerHTML = headerTxt;
-	    removeClass(document.getElementById("headertxt"), "onair");
 	    console.log("recorder.onstop called");
 	    enable(recStartButton);
 	    disable(recCancelButton);
@@ -121,8 +119,6 @@ function initMediaAccess() {
 	}
 	recorder.onstart = async function(evt) {
 	    document.getElementById("headertxt").innerHTML = headerOnAir;
-	    addClass(document.getElementById("headertxt"), "onair");
-	    
 	    console.log("recorder.onstart called");
 	    sendAudio = false;
 	    // save working text if unsaved

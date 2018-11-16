@@ -153,17 +153,34 @@
 }
 
 
+/* Animation code (for shadows, see https://html-css-js.com/css/generator/text-shadow */
+/* NOT USED  */
+@keyframes toggle-text-weight {
+    from {
+	text-shadow: 
+            -1px 0 red, 0 1px red, 1px 0 red, 0 -1px red, 
+            -1px -1px red, 1px 1px red, -1px 1px red, 1px -1px red;
+    }
+    to {
+	text-shadow:
+	    0 0 5px red, 0 0 10px red, 0 0 15px red,
+	    0 0 20px red, 0 0 30px red, 0 0 0px red, 0 0 0px red, 0 0 0px red;
+    }
+}
+
 #onair {
-    /* background: red; */
-    /* color: black; */
-    background: black;
-    color: red;
     border-radius: .35rem;
     padding: 1rem 4rem 1rem 4rem;
     font-weight: 550;
+    letter-spacing: 3px;
+    font-size: 180%;
+
+    color: red;
+    background: #232323;
     text-shadow: 
         -1px 0 red, 0 1px red, 1px 0 red, 0 -1px red, 
         -1px -1px red, 1px 1px red, -1px 1px red, 1px -1px red;
-    letter-spacing: 3px;
-    font-size: 180%;
-}
+    /* animation-iteration-count: infinite;
+       animation-name: toggle-text-weight;
+       animation-duration: 4s;
+       } */
