@@ -95,12 +95,11 @@ window.onbeforeunload = function() {
 document.addEventListener("keyup", function() { globalKeyListener() });
 
 function initMediaAccess() {
-    let source;
     const mediaAccess = navigator.mediaDevices.getUserMedia({'audio': true, video: false});
     
     mediaAccess.then(function(stream) {
 	visualize();
-	source = audioCtx.createMediaStreamSource(stream);
+	const source = audioCtx.createMediaStreamSource(stream);
         source.connect(visAnalyser);
 	recorder = new MediaRecorder(stream);
 	recorder.onstop = function(evt) {
