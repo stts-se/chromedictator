@@ -90,8 +90,6 @@ window.onbeforeunload = function() {
     return "Are you sure you want to navigate away?";
 }
 
-document.addEventListener("keydown", function() { globalKeyListener() });
-
 function initMediaAccess() {
     const mediaAccess = navigator.mediaDevices.getUserMedia({'audio': true, video: false});
     
@@ -362,6 +360,21 @@ function initWebkitSpeechRecognition() {
 }
 
 function populateShortcuts() {
+    function globalKeyListener() {
+	//console.log("keycode debug", event.keyCode, event.ctrlKey);
+	if (event.keyCode === keyCodeEscape && !recCancelButton.disabled) {
+	    recCancelButton.click();
+	}
+	if (event.ctrlKey && event.keyCode === keyCodeSpace) {
+	    if (!recSendButton.disabled)
+		recSendButton.click();
+	    else if  (!recStartButton.disabled) {
+		recStartButton.click();
+	    }
+	}
+    };
+    document.addEventListener("keydown", function() { globalKeyListener() });
+    
     document.getElementById("shortcuts").innerHTML = "<table>" +
 	"<tr><td style='text-align: right'>Ctrl-Space :</td><td>Start/Send recording</td></tr>" +
 	"<tr><td style='text-align: right'>Ctrl-Enter :</td><td>Save text</td></tr>" +
@@ -404,9 +417,10 @@ function updateAbbrevTable() {
     	td1.innerText = k;
     	td2.innerText = v;
 	td3.setAttribute("class","abbrev_row_delete");
-	td3.setAttribute("style","vertical-align: middle; horizontal-align: left");
+	td3.setAttribute("style","vertical-align: middle; text-align: left");
 	const del = document.createElement('button');
 	del.innerHTML = "&#x274C;";
+	del.setAttribute("class", "btn icon");
 	del.setAttribute("style","background: none; vertical-align: middle; text-align: left; border: none; font-size: 50%; width: 100%; height: 100%");
 	del.setAttribute("title", "delete abbrev '" + k + "'");
 	del.addEventListener('click', function(evt) {
@@ -938,7 +952,7 @@ document.getElementById("current-utt").addEventListener("changed", function() { 
 
 document.getElementById("current-utt").addEventListener("keyup", function() {
     if (event.ctrlKey && event.keyCode === keyCodeEnter) {
-	    saveTextButton.click();
+        saveTextButton.click();
     }
 });
 
@@ -1209,21 +1223,6 @@ function renewFilenameBase() {
     console.log(" === >>> filenameBase set to " + filenameBase + " <<< === ");
     return filenameBase;
 }
-
-function globalKeyListener() {
-    //console.log("keycode debug", event.keyCode, event.ctrlKey);
-    if (event.keyCode === keyCodeEscape && !recCancelButton.disabled) {
-	recCancelButton.click();
-    }
-    if (event.ctrlKey && event.keyCode === keyCodeSpace) {
-	if (!recSendButton.disabled)
-	    recSendButton.click();
-	else if  (!recStartButton.disabled) {
-	    recStartButton.click();
-	}
-    }    
-}
-
 
 // -----------------
 // ... AND FINALLY SOME FUN!
