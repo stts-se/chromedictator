@@ -105,6 +105,23 @@
     margin-bottom: 0.5em;
 }
 
+.settings-sub {
+    display: grid;
+    grid-auto-columns: auto auto;
+    grid-auto-rows: auto;
+    justify-items: top;
+}
+
+.settings-sub .language {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.settings-sub .autostart {
+    grid-column: 2;
+    grid-row: 1;
+}
+
 .audio .content {
     /* grid-column: 1; */
     /* grid-row: 2; */

@@ -45,13 +45,19 @@
 				<!-- <span>Start session</span> -->
 			    </div>
 			    
-			    <div class="language">Language <br/>
-				<select class="dropdown" id="lang_select">
-				    <option selected value="sv-SE">sv-SE</option>
-				    <option value="en-UK">en-UK</option>
-				    <option value="en-US">en-US</option>
-				    <option value="da-DK">da-DK</option>
-				</select>
+			    <div class="settings-sub">
+				<span class="language">Language <br/>
+				    <select class="dropdown" id="lang_select">
+					<option selected value="sv-SE">sv-SE</option>
+					<option value="en-UK">en-UK</option>
+					<option value="en-US">en-US</option>
+					<option value="da-DK">da-DK</option>
+				    </select>
+				</span>
+				<span title="Automatically restart recordings after break" class="autostart">Auto restart<br/>
+				    <input id="do_autostart" type="checkbox" checked="checked"></input>
+				    <label for="do_autostart" id="autostart_on_off_text">on</label>
+				</span>
 			    </div>
 			</div>
 		    </div>
@@ -136,18 +142,18 @@
 		<div class="menu panel content">
 		    <!-- <div class="title">Menu</div> -->
 		    <!-- <div class="content"> -->
-			<span class="docs">
-			    <span id="api_docs" class="btn">API docs</span>
-			    <a title="github.com/stts-se/chromedictator" class="btn" target="_blank" href="https://github.com/stts-se/chromedictator">Code</a>
-			    <span id="report_issue" class="btn" title="Requires github.com account">Report issue</span>
-			</span>
-			
-			<span class="links">
-			    <a href="http://stts.se" title="http://stts.se" style="vertical-align: middle;" target="_blank">
-				<img style="width: 20px; vertical-align: middle;" src="logo-512.png" alt="logo"/>
-				<!-- http://stts.se -->
-			    </a>
-			</span>
+		    <span class="docs">
+			<span id="api_docs" class="btn">API docs</span>
+			<a title="github.com/stts-se/chromedictator" class="btn" target="_blank" href="https://github.com/stts-se/chromedictator">Code</a>
+			<span id="report_issue" class="btn" title="Requires github.com account">Report issue</span>
+		    </span>
+		    
+		    <span class="links">
+			<a href="http://stts.se" title="http://stts.se" style="vertical-align: middle;" target="_blank">
+			    <img style="width: 20px; vertical-align: middle;" src="logo-512.png" alt="logo"/>
+			    <!-- http://stts.se -->
+			</a>
+		    </span>
 		    </span>
 		    <!-- </div> -->
 		</div>

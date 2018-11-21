@@ -225,8 +225,8 @@ function initWebkitSpeechRecognition() {
     const finalResponse = document.getElementById("current-utt");
     finalResponse.addEventListener('keyup', checkForAbbrev);
     recognition.lang = "sv";
-    recognition.continuous = true;
-    //recognition.continuous = false;
+    //recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognition.isCancelled = false;
 
@@ -244,9 +244,9 @@ function initWebkitSpeechRecognition() {
 	    sendAudio = true;
 	    //console.log("recognition.onresult sendAudio", sendAudio);
 	    try {
-		recorder.stop();
+		await recorder.stop();
 	    } catch(err) {}
-	    recognition.stop();
+	    await recognition.stop();
 	}
 	
 	finalResponse.value = text.trim();
@@ -257,6 +257,15 @@ function initWebkitSpeechRecognition() {
 	const isEdited = false;
 	const overwrite = false;
 	await textToServer(sessionField.value.trim(), filenameBase, text.trim(), isEdited, overwrite);
+
+	// AUTO RESTART (has async issues)
+	const autostart = document.getElementById("do_autostart").checked
+	logMessage("info", "autostart: " + autostart);
+	if (autostart) {
+	    //try {
+	    recognition.start();
+	    //} catch (err) {} // TODO! Ideally, we should know what state we're in....
+	}
     }
     
     // on result from speech rec
@@ -292,7 +301,7 @@ function initWebkitSpeechRecognition() {
 	recognition.isCancelled = false;
     }
 
-    const stopRecorder = function(caller, doSendAudio) {
+    const stopRecorder = async function(caller, doSendAudio) {
 	console.log("recognition." + caller);
 	console.log("recognition.stopRecorder | already cancelled: " + recognition.isCancelled);
 	if (!recognition.isCancelled) {
@@ -302,12 +311,12 @@ function initWebkitSpeechRecognition() {
 	console.log("recognition.stopRecorder | sendAudio: " + sendAudio);
 	if (isRecording) {
 	    try {
-		recorder.stop();
+		await recorder.stop();
 	    } catch(err) {}
 	}
     }
     
-    recognition.onstart = function() { startRecorder("onstart") };
+    recognition.onstart = function() { 	startRecorder("onstart") };
     recognition.onsoundstart = function() { startRecorder("onsoundstart") };
     recognition.onspeechstart = function() { startRecorder("onspeechstart") };
 
@@ -913,6 +922,15 @@ recSendButton.addEventListener("click", async function() {
 
 sessionField.addEventListener("keyup", function() { validateSessionName() });
 sessionField.addEventListener("change", function() { validateSessionName() });
+
+document.getElementById("do_autostart").addEventListener("click", function(evt) {
+    const ele = document.getElementById("autostart_on_off_text");
+    console.log(ele);
+    if (evt.target.checked)
+	ele.innerText = "on";
+    else
+	ele.innerText = "off";
+});
 
 document.getElementById("report_issue").addEventListener("click", function() { createIssueReport() });
 
