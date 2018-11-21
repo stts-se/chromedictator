@@ -90,7 +90,7 @@ window.onbeforeunload = function() {
     return "Are you sure you want to navigate away?";
 }
 
-document.addEventListener("keyup", function() { globalKeyListener() });
+document.addEventListener("keydown", function() { globalKeyListener() });
 
 function initMediaAccess() {
     const mediaAccess = navigator.mediaDevices.getUserMedia({'audio': true, video: false});
@@ -104,18 +104,18 @@ function initMediaAccess() {
 	recorder.isRecording = false;
 	recorder.onstop = function(evt) {
 	    document.getElementById("headertxt").innerHTML = headerTxt;
-	    console.log("recorder.onstop called");
+	    //console.log("recorder.onstop called");
 	    enable(recStartButton);
 	    disable(recCancelButton);
 	    disable(recSendButton);
 	    document.getElementById("rec_duration").innerHTML = "&nbsp;";
 	    recorder.isRecording = false;
 	    recorder.sendAudio = false;
-	    console.log("recorder.onstop completed");
+	    //console.log("recorder.onstop completed");
 	    trackTextChanges();
 	} 
 	recorder.onerror = function(evt) {
-	    console.log("recorder.onerror");
+	    console.log("recorder.onerror", evt);
 	    trackTextChanges();
 	}
 	recorder.onpause = function(evt) {
@@ -123,7 +123,7 @@ function initMediaAccess() {
 	}
 	recorder.onstart = async function(evt) {
 	    document.getElementById("headertxt").innerHTML = headerOnAir;
-	    console.log("recorder.onstart called");
+	    //console.log("recorder.onstart called");
 	    recorder.sendAudio = false;
 
 	    // save working text if unsaved
@@ -143,7 +143,7 @@ function initMediaAccess() {
 	    await enable(recSendButton);
 	    recStartTime = new Date();
 	    recorder.isRecording = true;
-	    console.log("recorder.onstart completed");
+	    //console.log("recorder.onstart completed");
 	    logMessage("info", "Recording started");
 	} 
 	recorder.ondataavailable = async function (evt) {	    
@@ -240,7 +240,7 @@ function initWebkitSpeechRecognition() {
 	if (replacement !== undefined && replacement !== null)
 	    wds[wds.length-1] = replacement;
 	const text = wds.join(" ");
-	console.log("doRecBreak new text", text);
+	//console.log("doRecBreak new text", text);
 	
 	// stop recorder if it's running
 	if (recorder.isRecording) {
@@ -268,7 +268,7 @@ function initWebkitSpeechRecognition() {
 	for (let i = event.resultIndex; i < event.results.length; ++i) {
 	    const text = event.results[i][0].transcript.trim();	    
 	    if (event.results[i].isFinal) {
-		console.log("recognition.onresult final");
+		//console.log("recognition.onresult final");
 		doRecBreak(text);
 		recognition.restartable = true;
 	    } else {
@@ -277,7 +277,7 @@ function initWebkitSpeechRecognition() {
 		const lastWd = wds[wds.length-1];
 		const replacement = breakKeywords[lastWd];
 		if (replacement !== undefined && replacement !== null) {
-		    console.log("recognition.onresult received break keyword: " + text + " => " + replacement);
+		    //console.log("recognition.onresult received break keyword: " + text + " => " + replacement);
 		    recognition.restartable = true;
 		    recognition.stop();
 		}
@@ -288,7 +288,7 @@ function initWebkitSpeechRecognition() {
     recognition.onnnomatch = function() { console.log("recognition.onnomatch"); }
 
     const startRecorder = function(caller) {
-	console.log("recognition." + caller);
+	//console.log("recognition." + caller);
     	if (!recorder.isRecording) {
 	    try {
 		recorder.start();
@@ -299,13 +299,13 @@ function initWebkitSpeechRecognition() {
     }
 
     const stopRecorder = async function(caller, doSendAudio) {
-	console.log("recognition." + caller);
-	console.log("recognition.stopRecorder | already cancelled: " + recognition.isCancelled);
+	// console.log("recognition." + caller);
+	// console.log("recognition.stopRecorder | already cancelled: " + recognition.isCancelled);
 	if (!recognition.isCancelled) {
 	    recorder.sendAudio = doSendAudio;
 	    recognition.isCancelled = !doSendAudio;
 	}
-	console.log("recognition.stopRecorder | recorder.sendAudio: " + recorder.sendAudio);
+	//console.log("recognition.stopRecorder | recorder.sendAudio: " + recorder.sendAudio);
 	if (recorder.isRecording) {
 	    try {
 		await recorder.stop();
@@ -313,14 +313,9 @@ function initWebkitSpeechRecognition() {
 	}
 
 	// AUTO RESTART
-	console.log("recognition.restartable " + recognition.restartable);
-	const autostart = document.getElementById("do_autostart").checked
-	console.log("autostart: " + autostart);
-	if (autostart && recognition.restartable) {
-	    //wait();
-		//try {
-		recognition.start();
-		//} catch (err) { } // Ideally, we should know what state we're in....
+	if (recognition.restartable && document.getElementById("do_autostart").checked) {
+	    //console.log("stopRecorder", "recognition.restartable", recognition.restartable, "autostart", true);
+	    recognition.start();
 	}
 
     }
@@ -334,7 +329,7 @@ function initWebkitSpeechRecognition() {
     // recognition.onspeechend = function() { stopRecorder("onspeechend", true) };
     
     recognition.onerror = function(event) {
-	console.log("recognition.onerror");
+	//console.log("recognition.onerror");
 	recorder.sendAudio = false;
 	if (event.error === 'no-speech') {
 	    logMessage("error", "No speech input");
@@ -355,7 +350,7 @@ function initWebkitSpeechRecognition() {
 	}
 	audio.src = "";
 	try {
-	    console.log("recognition.onerror | recorder.sendAudio: " + recorder.sendAudio);
+	    //console.log("recognition.onerror | recorder.sendAudio: " + recorder.sendAudio, event);
 	    stopRecorder("onerror", false);
 	} catch(err) {}
 	enable(recStartButton);
@@ -594,7 +589,7 @@ function visualize() {
 // };
 async function soundToServer(payload) {
 
-    console.log("soundToServer", payload);
+    //console.log("soundToServer", payload);
     
     const url = baseURL + "/save_audio";
     
@@ -611,7 +606,7 @@ async function soundToServer(payload) {
 	
 	if (rawResponse.ok) {
 	    const content = await rawResponse.text();
-	    console.log(content);
+	    //console.log(content);
 	    try {
 		const json = JSON.parse(content);
 		logMessage("info", json.message);
@@ -631,7 +626,7 @@ async function soundToServer(payload) {
 // Send a single text utterance to server for saving (with metadata)
 async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
 
-    console.log("textToServer", sessionName, fileName, text, isEdited, overwrite);
+    //console.log("textToServer", sessionName, fileName, text, isEdited, overwrite);
     
     const payload = {
 	"session_id" : sessionName,
@@ -658,7 +653,7 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
 	
 	if (rawResponse.ok) {
 	    const content = await rawResponse.text();
-	    console.log(content);
+	    //console.log(content);
 	    try {
 		const json = JSON.parse(content);
 		logMessage("info", json.message);
@@ -679,10 +674,10 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
     });
     await f();
 
-    if (isEdited)
-	logMessage("info", "saved edited text '" + text + "' on server");
-    else
-	logMessage("info", "saved recogniser result '" + text + "' on server");
+    // if (isEdited)
+    // 	logMessage("info", "saved edited text '" + text + "' on server");
+    // else
+    // 	logMessage("info", "saved recogniser result '" + text + "' on server");
     return res;
 };
 
@@ -720,7 +715,7 @@ function addToUttList(session, fName, text) {
     const savedIsUndefined = (savedSpan === undefined || savedSpan === null);
     const overwrite = !savedIsUndefined;
 
-    console.log("addToUttList", session, fName, text);
+    //console.log("addToUttList", session, fName, text);
 
     const saved = document.getElementById("saved-utts-table");
     let textSpan = null;
@@ -758,7 +753,7 @@ function addToUttList(session, fName, text) {
 	// audio.onplay = function() {	console.log("audio.onplay"); }
 	// audio.onpause = function() { console.log("audio.onpause"); }
 	audio.onended = function() {
-	    console.log("audio.onended");
+	    //console.log("audio.onended");
 	    audioSpan.firstChild.innerHTML = play;
 	    audioSpan.title = "Play";
 	};
@@ -901,14 +896,14 @@ function trackTextChanges() {
 }
 
 recStartButton.addEventListener("click", function() {
-    console.log("recStartButton clicked");
+    //console.log("recStartButton clicked");
     recorder.start();
     recognition.start();
     trackTextChanges();
 });
 
 recCancelButton.addEventListener("click", function() {
-    console.log("recCancelButton clicked");
+    //console.log("recCancelButton clicked");
     recorder.sendAudio = false;
     recognition.abort();
     recorder.stop();
@@ -917,7 +912,7 @@ recCancelButton.addEventListener("click", function() {
 
 
 recSendButton.addEventListener("click", function() {    
-    console.log("recSendButton clicked");
+    //console.log("recSendButton clicked");
     recorder.sendAudio = true;
     //console.log("recSendButton.clicked recorder.sendAudio", recorder.sendAudio);
     recognition.stop();
@@ -1210,11 +1205,8 @@ function shortFilenameBaseFor(fName) {
 }
 
 function renewFilenameBase() {
-    console.log("renewFilenameBase called");
-    //wait("renewFilenameBase");
     filenameBase = uuidv4();
-    console.log("**** filenameBase set to " + filenameBase);
-    console.log("renewFilenameBase completed");
+    console.log(" === >>> filenameBase set to " + filenameBase + " <<< === ");
     return filenameBase;
 }
 
