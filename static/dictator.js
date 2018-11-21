@@ -770,7 +770,7 @@ function addToUttList(session, fName, text) {
 	div.appendChild(textSpan);
 	div.appendChild(idSpan);
 	saved.appendChild(div);
-	scrollDown(document.getElementById("saved-utts"));
+	scrollDown(document.getElementById("saved-utts-table"));
     }
     textSpan.textContent = text;
 }
