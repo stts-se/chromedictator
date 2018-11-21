@@ -37,8 +37,6 @@ const saveTextButton = document.getElementById("save_edited_text");
 let filenameBase;
 let recStartTime;
 let sessionStart;
-let isRecording = false;
-let sendAudio = false;
 
 let abbrevMap = {};
 let breakKeywords = {
@@ -102,6 +100,8 @@ function initMediaAccess() {
 	const source = audioCtx.createMediaStreamSource(stream);
         source.connect(visAnalyser);
 	recorder = new MediaRecorder(stream);
+	recorder.sendAudio = false;
+	recorder.isRecording = false;
 	recorder.onstop = function(evt) {
 	    document.getElementById("headertxt").innerHTML = headerTxt;
 	    console.log("recorder.onstop called");
@@ -109,7 +109,8 @@ function initMediaAccess() {
 	    disable(recCancelButton);
 	    disable(recSendButton);
 	    document.getElementById("rec_duration").innerHTML = "&nbsp;";
-	    isRecording = false;
+	    recorder.isRecording = false;
+	    recorder.sendAudio = false;
 	    console.log("recorder.onstop completed");
 	    trackTextChanges();
 	} 
@@ -123,7 +124,8 @@ function initMediaAccess() {
 	recorder.onstart = async function(evt) {
 	    document.getElementById("headertxt").innerHTML = headerOnAir;
 	    console.log("recorder.onstart called");
-	    sendAudio = false;
+	    recorder.sendAudio = false;
+
 	    // save working text if unsaved
 	    const current = document.getElementById("current-utt");
 	    const text = current.value.trim();
@@ -140,13 +142,13 @@ function initMediaAccess() {
 	    await enable(recCancelButton);
 	    await enable(recSendButton);
 	    recStartTime = new Date();
-	    isRecording = true;
+	    recorder.isRecording = true;
 	    console.log("recorder.onstart completed");
 	    logMessage("info", "Recording started");
 	} 
 	recorder.ondataavailable = async function (evt) {	    
 	    const thisRecStart = recStartTime;
-	    console.log("recorder.ondataavailable | sendAudio: " + sendAudio + " | thisRecStart: " + thisRecStart);
+	    console.log("recorder.ondataavailable | recorder.sendAudio: " + recorder.sendAudio + " | thisRecStart: " + thisRecStart);
 	    recStartTime = null;
 	    document.getElementById("rec_duration").innerHTML = "&nbsp;"; 
 
@@ -156,7 +158,7 @@ function initMediaAccess() {
 		return;
 	    }
 
-	    if (sendAudio) {
+	    if (recorder.sendAudio) {
 		const thisRecEnd = new Date();
 		const timeCodeStart = thisRecStart.getTime()-sessionStart.getTime();
 		const recStart = thisRecStart.getTime();
@@ -198,7 +200,7 @@ function initMediaAccess() {
 	console.log("error from getUserMedia:", err);
 	const msg = "Couldn't initialize recorder: " + err;
 	alert(msg);
-	logMessage("error", msg);
+	logMessage("error", msg, err);
     });
     
 }
@@ -229,6 +231,7 @@ function initWebkitSpeechRecognition() {
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.isCancelled = false;
+    recognition.restartable = false;
 
     const doRecBreak = async function(recognisedText) {
 	const wds = recognisedText.split(/ +/);
@@ -240,9 +243,9 @@ function initWebkitSpeechRecognition() {
 	console.log("doRecBreak new text", text);
 	
 	// stop recorder if it's running
-	if (isRecording) {
-	    sendAudio = true;
-	    //console.log("recognition.onresult sendAudio", sendAudio);
+	if (recorder.isRecording) {
+	    recorder.sendAudio = true;
+	    //console.log("recognition.onresult recorder.sendAudio", recorder.sendAudio);
 	    try {
 		await recorder.stop();
 	    } catch(err) {}
@@ -257,15 +260,6 @@ function initWebkitSpeechRecognition() {
 	const isEdited = false;
 	const overwrite = false;
 	await textToServer(sessionField.value.trim(), filenameBase, text.trim(), isEdited, overwrite);
-
-	// AUTO RESTART (has async issues)
-	const autostart = document.getElementById("do_autostart").checked
-	logMessage("info", "autostart: " + autostart);
-	if (autostart) {
-	    //try {
-	    recognition.start();
-	    //} catch (err) {} // TODO! Ideally, we should know what state we're in....
-	}
     }
     
     // on result from speech rec
@@ -276,6 +270,7 @@ function initWebkitSpeechRecognition() {
 	    if (event.results[i].isFinal) {
 		console.log("recognition.onresult final");
 		doRecBreak(text);
+		recognition.restartable = true;
 	    } else {
 		tempResponse.innerHTML = text;
 		const wds = text.split(/ +/);
@@ -283,6 +278,7 @@ function initWebkitSpeechRecognition() {
 		const replacement = breakKeywords[lastWd];
 		if (replacement !== undefined && replacement !== null) {
 		    console.log("recognition.onresult received break keyword: " + text + " => " + replacement);
+		    recognition.restartable = true;
 		    recognition.stop();
 		}
 	    }
@@ -293,40 +289,53 @@ function initWebkitSpeechRecognition() {
 
     const startRecorder = function(caller) {
 	console.log("recognition." + caller);
-    	if (!isRecording) {
+    	if (!recorder.isRecording) {
 	    try {
 		recorder.start();
 	    } catch(err) {}
 	}
 	recognition.isCancelled = false;
+	recognition.restartable = false;
     }
 
     const stopRecorder = async function(caller, doSendAudio) {
 	console.log("recognition." + caller);
 	console.log("recognition.stopRecorder | already cancelled: " + recognition.isCancelled);
 	if (!recognition.isCancelled) {
-	    sendAudio = doSendAudio;
+	    recorder.sendAudio = doSendAudio;
 	    recognition.isCancelled = !doSendAudio;
 	}
-	console.log("recognition.stopRecorder | sendAudio: " + sendAudio);
-	if (isRecording) {
+	console.log("recognition.stopRecorder | recorder.sendAudio: " + recorder.sendAudio);
+	if (recorder.isRecording) {
 	    try {
 		await recorder.stop();
 	    } catch(err) {}
 	}
+
+	// AUTO RESTART
+	console.log("recognition.restartable " + recognition.restartable);
+	const autostart = document.getElementById("do_autostart").checked
+	console.log("autostart: " + autostart);
+	if (autostart && recognition.restartable) {
+	    //wait();
+		//try {
+		recognition.start();
+		//} catch (err) { } // Ideally, we should know what state we're in....
+	}
+
     }
     
     recognition.onstart = function() { 	startRecorder("onstart") };
-    recognition.onsoundstart = function() { startRecorder("onsoundstart") };
-    recognition.onspeechstart = function() { startRecorder("onspeechstart") };
+    // recognition.onsoundstart = function() { startRecorder("onsoundstart") };
+    // recognition.onspeechstart = function() { startRecorder("onspeechstart") };
 
-    recognition.onend = function() { stopRecorder("onstop", true) };
-    recognition.onsoundend = function() { stopRecorder("onsoundend", true) };
-    recognition.onspeechend = function() { stopRecorder("onspeechend", true) };
+    recognition.onend = function() { stopRecorder("onend", true); };
+    // recognition.onsoundend = function() { stopRecorder("onsoundend", true) };
+    // recognition.onspeechend = function() { stopRecorder("onspeechend", true) };
     
     recognition.onerror = function(event) {
 	console.log("recognition.onerror");
-	sendAudio = false;
+	recorder.sendAudio = false;
 	if (event.error === 'no-speech') {
 	    logMessage("error", "No speech input");
 	} else if (event.error === 'audio-capture') {
@@ -346,7 +355,7 @@ function initWebkitSpeechRecognition() {
 	}
 	audio.src = "";
 	try {
-	    console.log("recognition.onerror | sendAudio: " + sendAudio);
+	    console.log("recognition.onerror | recorder.sendAudio: " + recorder.sendAudio);
 	    stopRecorder("onerror", false);
 	} catch(err) {}
 	enable(recStartButton);
@@ -554,7 +563,7 @@ function visualize() {
 	let barHeight;
 	let x = 0;
 	
-	if (isRecording) { 
+	if (recorder !== undefined && recorder.isRecording) { 
 	    for(let i = 0; i < bufferLengthAlt; i++) {
 		barHeight = dataArrayAlt[i];
 		
@@ -589,7 +598,7 @@ async function soundToServer(payload) {
     
     const url = baseURL + "/save_audio";
     
-    (async () => {
+    const doSend = async function() {
 	
 	const rawResponse = await fetch(url, {
 	    method: "POST",
@@ -607,15 +616,15 @@ async function soundToServer(payload) {
 		const json = JSON.parse(content);
 		logMessage("info", json.message);
 	    } catch(err) {
-		logMessage("error", "couldn't parse json: " + err);
+		logMessage("error", "couldn't parse json: " + err, err);
 	    }
 	} else {
 	    console.log(rawResponse);
-	    logMessage("error", "couldn't save audio to server : " + rawResponse.statusText);
+	    const errMsg = await rawResponse.text();
+	    logMessage("error", "couldn't save audio to server : " + errMsg);
 	}
-
-	
-    })();
+    };
+    await doSend();
 };
 
 
@@ -655,13 +664,14 @@ async function textToServer(sessionName, fileName, text, isEdited, overwrite) {
 		logMessage("info", json.message);
 		return true;
 	    } catch (err) {
-		logMessage("error", "couldn't parse json: " + err);
+		logMessage("error", "couldn't parse json: " + err, err);
 		res = false;
 		return false;
 	    }
 	} else {
 	    console.log(rawResponse);
-	    logMessage("error", "couldn't save text to server : " + rawResponse.statusText);
+	    const errMsg = await rawResponse.text();
+	    logMessage("error", "couldn't save text to server : " + errMsg);
 	    res = false;
 	    return false;
 	}
@@ -698,8 +708,8 @@ async function saveAndAddToUttList(session, fName, text, isEdited) {
 
 	console.log("saveAndAddToUttList", session, fName, text, isEdited, overwrite);
 
-	if (textToServer(session, fName, text, isEdited, overwrite)) {
-	    addToUttList(session, fName, text);	    
+	if (await textToServer(session, fName, text, isEdited, overwrite)) {
+	    await addToUttList(session, fName, text);	    
 	}
     }
 }
@@ -746,18 +756,15 @@ async function addToUttList(session, fName, text) {
 		    audioSpan.title = "Play";
 		}
 	    });
-	    audio.onplay = function() {
-		console.log("audio.onplay");
-	    };
-	    audio.onpause = function() {
-		console.log("audio.onpause");
-	    };
+	    // audio.onplay = function() {	console.log("audio.onplay"); }
+	    // audio.onpause = function() { console.log("audio.onpause"); }
 	    audio.onended = function() {
 		console.log("audio.onended");
 		audioSpan.firstChild.innerHTML = play;
 		audioSpan.title = "Play";
 	    };
-	    cacheAudio(audio, audioSpan.firstChild, baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName);
+	    //cacheAudio(audio, audioSpan.firstChild, baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName);
+	    audio.src = document.getElementById("audio").src;
 	    audioSpan.appendChild(audio);
 
 	    div.appendChild(audioSpan);
@@ -805,11 +812,12 @@ async function getText(sessionName, fName, extension) {
 		    res = json.text;
 		}
 	    } catch (err) {
-	    	logMessage("error", err.message);
+	    	logMessage("error", err.message, err);
 	    }
 	} else {
 	    console.log(resp);
-	    logMessage("error", "couldn't get text from server : " + resp.statusText);
+	    const errMsg = await resp.text();
+	    logMessage("error", "couldn't get text from server : " + errMsg);
 	}
 
     }
@@ -837,8 +845,6 @@ function cacheAudio(audioElement, playPauseButton, url) {
 		    logMessage("error", "couldn't get audio from server : " + json.message);
 		} else {
 
-		    //console.log("resp.data", json.data);
-
     		    // https://stackoverflow.com/questions/16245767/creating-a-blob-from-a-base64-string-in-javascript#16245768
     		    const byteCharacters = atob(json.data);
 		    
@@ -856,11 +862,12 @@ function cacheAudio(audioElement, playPauseButton, url) {
 		audioElement.setAttribute("disabled","disabled");
 		playPauseButton.setAttribute("disabled","disabled");
 		playPauseButton.setAttribute("title","No audio");
-	    	logMessage("error", err.message);
+	    	logMessage("error", err.message, err);
 	    }
 	} else {
 	    console.log(resp);
-	    logMessage("error", "couldn't get audio from server : " + resp.statusText);
+	    const errMsg = await resp.text();
+	    logMessage("error", "couldn't get audio from server : " + errMsg);
 	}
 	
     })();
@@ -904,7 +911,7 @@ recStartButton.addEventListener("click", async function() {
 
 recCancelButton.addEventListener("click", function() {
     console.log("recCancelButton clicked");
-    sendAudio = false;
+    recorder.sendAudio = false;
     recognition.abort();
     recorder.stop();
     trackTextChanges();
@@ -913,8 +920,8 @@ recCancelButton.addEventListener("click", function() {
 
 recSendButton.addEventListener("click", async function() {    
     console.log("recSendButton clicked");
-    sendAudio = true;
-    //console.log("recSendButton.clicked sendAudio", sendAudio);
+    recorder.sendAudio = true;
+    //console.log("recSendButton.clicked recorder.sendAudio", recorder.sendAudio);
     recognition.stop();
     recorder.stop();
     trackTextChanges();
@@ -925,7 +932,6 @@ sessionField.addEventListener("change", function() { validateSessionName() });
 
 document.getElementById("do_autostart").addEventListener("click", function(evt) {
     const ele = document.getElementById("autostart_on_off_text");
-    console.log(ele);
     if (evt.target.checked)
 	ele.innerText = "on";
     else
@@ -987,7 +993,7 @@ async function listFromURL(url, description) {
 	    return j.result;
 	}
     }).catch( r => {
-	logMessage("error", "couldn't list " + description + ": " + r.responseText);
+	logMessage("error", "couldn't list " + description + ": " + r.responseText, err);
 	return null;
     });
     return list;
@@ -1024,8 +1030,10 @@ document.getElementById("api_docs").addEventListener("click", async function() {
     const serverAPI = await fetch(baseURL+ "/doc").then(function(r) {
 	if (r.ok)
 	    return r.text();
-	else 
-	    logMessage("error","couldn't retreive server docs: " + statusText);
+	else {
+	    const errMsg = r.text();
+	    logMessage("error","couldn't retreive server docs: " + errMsg);
+	}
     }).then(s => { return s.trim().split("\n") });
     
 
@@ -1135,7 +1143,7 @@ function updateSessionClock() {
     const durMillis = now.getTime() - sessionStart.getTime();
     const durSeconds = Math.floor(durMillis/1000);
     document.getElementById("session_duration").textContent = "[" + durSeconds + "s]";
-    var t = setTimeout(updateSessionClock, 500);
+    setTimeout(updateSessionClock, 500);
 }
 
 function addClass(element, className) {
@@ -1159,12 +1167,12 @@ function scrollDown(element) {
     element.scrollTop = element.scrollHeight;
 }
 
-function logMessage(title, text) {
-    if (title === "info") {
-	console.log(title, text);
+function logMessage(title, text, stacktrace) {
+    if (stacktrace !== undefined) {
+	//const stack = new Error().stack;
+	console.log(title, text, stacktrace.stack);
     } else {	
-	const stack = new Error().stack;
-	console.log(title, text, stack);
+	console.log(title, text);
     }
     document.getElementById("messages").textContent = title + ": " + text;    
 }
@@ -1204,8 +1212,11 @@ function shortFilenameBaseFor(fName) {
 }
 
 function renewFilenameBase() {
+    console.log("renewFilenameBase called");
+    //wait("renewFilenameBase");
     filenameBase = uuidv4();
     console.log("**** filenameBase set to " + filenameBase);
+    console.log("renewFilenameBase completed");
     return filenameBase;
 }
 
