@@ -1,7 +1,7 @@
 .PHONY: all
-all: chromedicator chromedict_mac chromedict_win.exe chromedictator.zip
+all: chromedictator chromedict_mac chromedict_win.exe chromedictator.zip
 
-chromedicator: chromedictator.go static/*css static/*html static/*js static/*ico static/*png README.md
+chromedictator: chromedictator.go static/*css static/*html static/*js static/*ico static/*png README.md
 	GOOS=linux GOARCH=amd64 go build -o chromedictator chromedictator.go
 
 chromedict_mac: chromedictator.go static/*css static/*html static/*js static/*ico static/*png README.md
@@ -12,7 +12,7 @@ chromedict_win.exe: chromedictator.go static/*css static/*html static/*js static
 	GOOS=windows GOARCH=amd64 go build -o chromedict_win.exe chromedictator.go
 
 
-chromedictator.zip: chromedicator chromedict_mac chromedict_win.exe static/*css static/*html static/*js static/*ico static/*png README.md
+chromedictator.zip: chromedictator chromedict_mac chromedict_win.exe static/*css static/*html static/*js static/*ico static/*png README.md
 	zip -q chromedictator.zip chromedictator chromedict_mac chromedict_win.exe static/*css static/*html static/*js static/*ico static/*png README.md
 	rm chromedictator
 	rm chromedict_mac
