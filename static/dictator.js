@@ -472,7 +472,7 @@ function updateAbbrevTable() {
 }
 
 async function addAbbrev(abbrev, expansion) {
-    await fetch(baseURL+ "/abbrev/add/"+ abbrev + "/" + expansion).then(async function(r) {
+    await fetch(baseURL+ "/abbrev/add/"+ abbrev + "/" + expansion).then(function(r) {
 	if (r.ok) {
 	    logMessage("info", "added abbrev " + abbrev + " => " + expansion);
 	} else {
@@ -482,7 +482,7 @@ async function addAbbrev(abbrev, expansion) {
 };
 
 async function deleteAbbrev(abbrev) {
-    await fetch(baseURL + "/abbrev/delete/" + abbrev).then(async function(r) {
+    await fetch(baseURL + "/abbrev/delete/" + abbrev).then(function(r) {
 	if (r.ok) {
 	    logMessage("info", "deleted abbrev " + abbrev);
 	    loadAbbrevTable();
@@ -715,66 +715,64 @@ async function saveAndAddToUttList(session, fName, text, isEdited) {
 }
 
 // add to 'saved text' area with cached audio 
-async function addToUttList(session, fName, text) {
+function addToUttList(session, fName, text) {
     const savedSpan = document.getElementById(fName);
     const savedIsUndefined = (savedSpan === undefined || savedSpan === null);
     const overwrite = !savedIsUndefined;
 
     console.log("addToUttList", session, fName, text);
 
-    //if (text.length > 0 && fName !== undefined && fName !== null) {
-	const saved = document.getElementById("saved-utts-table");
-	let textSpan = null;
-	if (overwrite) {
-	    textSpan = savedSpan;
-	} else {
-	    const div = document.createElement("div");
-	    div.setAttribute("class","highlightonhover");
-	    div.setAttribute("title",fName);
-	    textSpan = document.createElement("span")
-	    textSpan.id = fName;
-	    textSpan.setAttribute("style","padding-left: 0.5em;");
-	    const idSpan = document.createElement("span");
-	    idSpan.textContent = " " + shortFilenameBaseFor(fName); // space to make it easier to copy id without text
-	    idSpan.setAttribute("style","vertical-align: top; float: right; text-align: right; font-family: monospace");
-	    const audioSpan = document.createElement("span");
-	    const audio = document.createElement("audio");
-	    const play = "&#9654;";
-	    const pause = "&#9646;&#9646;";
-	    audioSpan.innerHTML  = "<button style='width: 30px; text-align: center' class='btn black replay'>" + play + "</button>";
-	    const playChar = audioSpan.firstChild.innerHTML;
-	    audioSpan.style = "vertical-align: top; text-align: center";
-	    audioSpan.title = "Play";
-	    audioSpan.addEventListener("click", function () {
-		if (audioSpan.firstChild.innerText === playChar) {
-		    audio.play();
-		    audioSpan.firstChild.innerHTML = pause;
-		    audioSpan.title = "Pause";
-		} else {
-		    audio.pause();
-		    audioSpan.firstChild.innerHTML = play;
-		    audioSpan.title = "Play";
-		}
-	    });
-	    // audio.onplay = function() {	console.log("audio.onplay"); }
-	    // audio.onpause = function() { console.log("audio.onpause"); }
-	    audio.onended = function() {
-		console.log("audio.onended");
+    const saved = document.getElementById("saved-utts-table");
+    let textSpan = null;
+    if (overwrite) {
+	textSpan = savedSpan;
+    } else {
+	const div = document.createElement("div");
+	div.setAttribute("class","highlightonhover");
+	div.setAttribute("title",fName);
+	textSpan = document.createElement("span")
+	textSpan.id = fName;
+	textSpan.setAttribute("style","padding-left: 0.5em;");
+	const idSpan = document.createElement("span");
+	idSpan.textContent = " " + shortFilenameBaseFor(fName); // space to make it easier to copy id without text
+	idSpan.setAttribute("style","vertical-align: top; float: right; text-align: right; font-family: monospace");
+	const audioSpan = document.createElement("span");
+	const audio = document.createElement("audio");
+	const play = "&#9654;";
+	const pause = "&#9646;&#9646;";
+	audioSpan.innerHTML  = "<button style='width: 30px; text-align: center' class='btn black replay'>" + play + "</button>";
+	const playChar = audioSpan.firstChild.innerHTML;
+	audioSpan.style = "vertical-align: top; text-align: center";
+	audioSpan.title = "Play";
+	audioSpan.addEventListener("click", function () {
+	    if (audioSpan.firstChild.innerText === playChar) {
+		audio.play();
+		audioSpan.firstChild.innerHTML = pause;
+		audioSpan.title = "Pause";
+	    } else {
+		audio.pause();
 		audioSpan.firstChild.innerHTML = play;
 		audioSpan.title = "Play";
-	    };
-	    //cacheAudio(audio, audioSpan.firstChild, baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName);
-	    audio.src = document.getElementById("audio").src;
-	    audioSpan.appendChild(audio);
+	    }
+	});
+	// audio.onplay = function() {	console.log("audio.onplay"); }
+	// audio.onpause = function() { console.log("audio.onpause"); }
+	audio.onended = function() {
+	    console.log("audio.onended");
+	    audioSpan.firstChild.innerHTML = play;
+	    audioSpan.title = "Play";
+	};
+	//await cacheAudio(audio, audioSpan.firstChild, baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName);
+	audio.src = document.getElementById("audio").src;
+	audioSpan.appendChild(audio);
 
-	    div.appendChild(audioSpan);
-	    div.appendChild(textSpan);
-	    div.appendChild(idSpan);
-	    saved.appendChild(div);
-	    scrollDown(document.getElementById("saved-utts"));
-	}
-	textSpan.textContent = text;
-    //}
+	div.appendChild(audioSpan);
+	div.appendChild(textSpan);
+	div.appendChild(idSpan);
+	saved.appendChild(div);
+	scrollDown(document.getElementById("saved-utts"));
+    }
+    textSpan.textContent = text;
 }
 
 
@@ -902,7 +900,7 @@ function trackTextChanges() {
      	disable(saveTextButton);
 }
 
-recStartButton.addEventListener("click", async function() {
+recStartButton.addEventListener("click", function() {
     console.log("recStartButton clicked");
     recorder.start();
     recognition.start();
@@ -918,7 +916,7 @@ recCancelButton.addEventListener("click", function() {
 });
 
 
-recSendButton.addEventListener("click", async function() {    
+recSendButton.addEventListener("click", function() {    
     console.log("recSendButton clicked");
     recorder.sendAudio = true;
     //console.log("recSendButton.clicked recorder.sendAudio", recorder.sendAudio);
@@ -969,13 +967,13 @@ document.getElementById("reset_session_stopwatch").addEventListener("click", fun
 
 
 // list file basenames on server
-async function listBasenames(sessionName) {
+function listBasenames(sessionName) {
     const url = baseURL + "/admin/list/basenames/" + sessionName;
     return listFromURL(url, "basenames");
 }
 
 // list file names on server
-async function listFiles(sessionName) {
+function listFiles(sessionName) {
     const url = baseURL + "/admin/list/files/" + sessionName;
     return listFromURL(url, "files");
 }
