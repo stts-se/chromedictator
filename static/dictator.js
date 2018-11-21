@@ -40,8 +40,14 @@ let sessionStart;
 
 let abbrevMap = {};
 let breakKeywords = {
-    "punkt": ".",
-    "frågetecken": "?",
+    "sv" : {
+	"punkt": ".",
+	"frågetecken": "?"
+    },
+    "da" : {
+	"punkt": ".",
+	"spørgsmålstegn": "?",
+    }
 };
 
 
@@ -66,12 +72,13 @@ window.onload = function () {
     disable(saveTextButton);
     disable(document.getElementById("current-utt"));
 
-    loadAbbrevTable();
-    populateShortcuts();
-
     initWebkitSpeechRecognition();
     initMediaAccess();
     
+    loadAbbrevTable();
+    populateLanguages();
+    populateShortcuts();
+
     document.getElementById("current-utt").focus();
 
     updateSessionClock();
@@ -234,9 +241,12 @@ function initWebkitSpeechRecognition() {
     const doRecBreak = async function(recognisedText) {
 	const wds = recognisedText.split(/ +/);
 	const lastWd = wds[wds.length-1];
-	const replacement = breakKeywords[lastWd];
-	if (replacement !== undefined && replacement !== null)
-	    wds[wds.length-1] = replacement;
+	const breakKeywordsForLang = breakKeywords[recognition.lang.replace(/-.*/,"")];
+	if (breakKeywordsForLang !== undefined && breakKeywordsForLang !== null) {
+	    const replacement = breakKeywordsForLang[lastWd];
+	    if (replacement !== undefined && replacement !== null)
+		wds[wds.length-1] = replacement;
+	}
 	const text = wds.join(" ");
 	//console.log("doRecBreak new text", text);
 	
@@ -357,6 +367,28 @@ function initWebkitSpeechRecognition() {
     };
 
     
+}
+
+function populateLanguages() {
+    const langSelect = document.getElementById("lang_select");
+    const langs = ["sv-SE",
+		   "da-DK",
+		   "de-DE",
+		   "en-UK",
+		   "en-US",
+		   "fr-FR",
+		   "nb-NO"];
+    for (let i=0; i<langs.length;i++) {
+	const lang = langs[i];
+	const ele = document.createElement("option");
+	ele.value=lang;
+	ele.textContent=lang;
+	if (i===0) {
+	    recognition.lang = lang;
+	    ele.selected = "selected";
+	}
+	langSelect.appendChild(ele);
+    }
 }
 
 function populateShortcuts() {
