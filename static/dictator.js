@@ -266,7 +266,7 @@ function initWebkitSpeechRecognition() {
 	for (let i = event.resultIndex; i < event.results.length; ++i) {
 	    const text = event.results[i][0].transcript.trim();	    
 	    if (event.results[i].isFinal) {
-		//console.log("recognition.onresult final");
+		//console.log("recognition.onresult final", text);
 		doRecBreak(text);
 		recognition.restartable = true;
 	    } else {
