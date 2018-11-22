@@ -554,21 +554,15 @@ function checkForAbbrev(evt) {
 	if (regexRes === null) {
 	    return;
 	};
-	const wordBeforeSpace = regexRes[0]; 
-	console.log("WBS:", wordBeforeSpace);
-	
+	const wordBeforeSpace = regexRes[0];
 	
 	if (abbrevMap.hasOwnProperty(wordBeforeSpace.trim())) {
 	    //console.log(wordBeforeSpace, abbrevMap[wordBeforeSpace]);
 	    // Match found. Replace abbreviation with its expansion
 	    const textBefore = text.substring(0,startPos - wordBeforeSpace.length);
-	    if (wordBeforeSpace  === "") {
-	    	textBefore = "";
-	    }
 	    const textAfter = text.substring(startPos);
 	    const expansion = abbrevMap[wordBeforeSpace.trim()];
-	    
-	    
+	    	    
 	    // if first word in text, special treatment
 	    if (text.length === wordBeforeSpace.length + 1) { // + 1 = SPACE
 		ta.value = expansion + " " + textAfter.trim();
