@@ -535,8 +535,8 @@ async function deleteAbbrev(abbrev) {
 
 
 const leftWordRE = /(?:^| +)([^ ]+)$/; // TODO Really no need for regexp,
-				    // just pick off characters until
-				    // space, etc, or end of string?
+// just pick off characters until
+// space, etc, or end of string?
 
 function checkForAbbrev(evt) {
     if ( evt.key === " ") {
@@ -555,16 +555,27 @@ function checkForAbbrev(evt) {
 	    return;
 	};
 	const wordBeforeSpace = regexRes[0]; 
+	console.log("WBS:", wordBeforeSpace);
+	
 	
 	if (abbrevMap.hasOwnProperty(wordBeforeSpace.trim())) {
 	    //console.log(wordBeforeSpace, abbrevMap[wordBeforeSpace]);
 	    // Match found. Replace abbreviation with its expansion
 	    const textBefore = text.substring(0,startPos - wordBeforeSpace.length);
+	    if (wordBeforeSpace  === "") {
+	    	textBefore = "";
+	    }
 	    const textAfter = text.substring(startPos);
 	    const expansion = abbrevMap[wordBeforeSpace.trim()];
 	    
 	    
-	    ta.value = textBefore.trim() + " " + expansion + " " + textAfter.trim();
+	    // if first word in text, special treatment
+	    if (text.length === wordBeforeSpace.length + 1) { // + 1 = SPACE
+		ta.value = expansion + " " + textAfter.trim();
+	    }
+	    else { 
+		ta.value = textBefore.trim() + " " + expansion + " " + textAfter.trim();
+	    };
 	    // Move cursor to directly after expanded word + 1 (space)
 	    ta.selectionEnd =  (textBefore.trim() + " " + expansion).length + 1;
 	};	
