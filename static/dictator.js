@@ -780,8 +780,28 @@ function addToUttList(session, fName, text) {
 	textSpan.id = fName;
 	textSpan.setAttribute("style","padding-left: 0.5em;");
 	const idSpan = document.createElement("span");
-	idSpan.textContent = " " + shortFilenameBaseFor(fName); // space to make it easier to copy id without text
-	idSpan.setAttribute("style","vertical-align: top; float: right; text-align: right; font-family: monospace");
+	idSpan.setAttribute("title","Ctrl-click to toggle id display (full/short)");
+	idSpan.setAttribute("style","cursor: default; vertical-align: top; float: right; text-align: right; font-family: monospace");
+	const idFull = document.createElement("span");
+	idFull.textContent = fName;
+	idFull.style["display"] = "none";
+	const idSummary = document.createElement("span");
+	idSummary.textContent = shortFilenameBaseFor(fName);
+	idSpan.appendChild(idSummary);
+	idSpan.appendChild(idFull);
+	idSpan.addEventListener("click", function(evt) {
+	    if (evt.ctrlKey) {
+		if (idFull.style["display"] === "none") {
+	    	    idFull.style["display"] = "block";
+	    	    idSummary.style["display"] = "none";
+		}
+		else {
+	    	    idFull.style["display"] = "none";
+	    	    idSummary.style["display"] = "block";
+		}
+	    }
+	});
+	
 	const audioSpan = document.createElement("span");
 	const audio = document.createElement("audio");
 	const play = "&#9654;";
@@ -808,8 +828,8 @@ function addToUttList(session, fName, text) {
 	    audioSpan.firstChild.innerHTML = play;
 	    audioSpan.title = "Play";
 	};
-	//await cacheAudio(audio, audioSpan.firstChild, baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName);
-	audio.src = document.getElementById("audio").src;
+	cacheAudio(audio, audioSpan.firstChild, baseURL + "/get_audio/" + sessionField.value.trim() + "/" + fName);
+	//audio.src = document.getElementById("audio").src;
 	audioSpan.appendChild(audio);
 
 	div.appendChild(audioSpan);
