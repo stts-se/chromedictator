@@ -10,9 +10,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -29,10 +31,17 @@ var abbrevMutex = &sync.RWMutex{}
 // TODO Add  command line flag
 var baseDir = "audio_files" // This is where the session sub-dirs live
 
+var autosubCmd = "autosub"
+
 // Abbrev is a tuple holding an abbreviation and its expansion.
 type Abbrev struct {
 	Abbrev    string `json:"abbrev"`
 	Expansion string `json:"expansion"`
+}
+
+// SessionObject holds a session value
+type SessionObject struct {
+	SessionID string `json:"session_id"`
 }
 
 // TextObject holds values that can be used to produce a text file
@@ -45,7 +54,7 @@ type TextObject struct {
 
 // JSONObject holds values that can be used to produce a json file with a recording's metadata
 type JSONObject struct {
-	SessionID string `json:"session_id"`
+	SessionObject
 
 	// StartTime: start time (human readable text)
 	StartTime string `json:"start_time"`
@@ -83,6 +92,19 @@ type textResponse struct {
 	FileType string `json:"file_type"`
 	Text     string `json:"text"`
 	Message  string `json:"message"`
+}
+
+type srtUnit struct {
+	ID       int64  `json:"id"`
+	TimeCode string `json:"time_code"`
+	Text     string `json:"text"`
+}
+
+type srtResponse struct {
+	JSONObject
+	//FileType string    `json:"file_type"`
+	Text    []srtUnit `json:"text"`
+	Message string    `json:"message"`
 }
 
 type listResponse struct {
@@ -351,11 +373,16 @@ func (to TextObject) validate() []string {
 	return res
 }
 
-func (jo JSONObject) validate() []string {
+func (so SessionObject) validate() []string {
 	res := []string{}
-	if jo.SessionID == "" {
+	if so.SessionID == "" {
 		res = append(res, "missing session_id")
 	}
+	return res
+}
+
+func (jo JSONObject) validate() []string {
+	res := []string{}
 	if jo.StartTime == "" {
 		res = append(res, "missing start_time")
 	}
@@ -409,7 +436,7 @@ func prettyMarshal(thing interface{}) ([]byte, error) {
 	return res, nil
 }
 
-func mimeType(fName string) string {
+func audioMimeType(fName string) string {
 	ext := strings.TrimPrefix(filepath.Ext(fName), ".")
 	if ext == "mp3" {
 		return "audio/mpeg"
@@ -419,9 +446,11 @@ func mimeType(fName string) string {
 	}
 	return fmt.Sprintf("audio/%s", ext)
 }
+
 func getEditedText(w http.ResponseWriter, r *http.Request) {
 	getText(w, r, "edi")
 }
+
 func getRecogniserText(w http.ResponseWriter, r *http.Request) {
 	getText(w, r, "rec")
 }
@@ -478,8 +507,7 @@ func getText(w http.ResponseWriter, r *http.Request, defaultExt string) {
 			http.Error(w, msg, http.StatusInternalServerError)
 			return
 		}
-
-		res.FileType = mimeType(fullPath)
+		res.FileType = "text/plain"
 		res.Text = strings.TrimSpace(string(bytes))
 	}
 	basename := strings.TrimSuffix(fullPath, filepath.Ext(fullPath))
@@ -531,7 +559,6 @@ func getAudio(w http.ResponseWriter, r *http.Request) {
 		return
 
 	}
-
 	fullPath := filepath.Join(baseDir, session, fileName)
 	ext := filepath.Ext(fullPath)
 	if ext == "" {
@@ -549,7 +576,7 @@ func getAudio(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		res.FileType = mimeType(fullPath)
+		res.FileType = audioMimeType(fullPath)
 		data := base64.StdEncoding.EncodeToString(bytes)
 		res.Data = data
 	}
@@ -557,6 +584,104 @@ func getAudio(w http.ResponseWriter, r *http.Request) {
 	resJSON, err := rec.PrettyMarshal(res)
 	if err != nil {
 		msg := fmt.Sprintf("get_audio: failed to create JSON from struct : %v", res)
+		log.Print(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "%s\n", string(resJSON))
+}
+
+func autosubEnabled() error {
+	_, err := exec.LookPath(autosubCmd)
+	if err != nil {
+		return fmt.Errorf("external '%s' command does not exist", autosubCmd)
+	}
+	return nil
+}
+
+func autosub(w http.ResponseWriter, r *http.Request) {
+	if err := autosubEnabled(); err != nil {
+		msg := fmt.Sprintf("autosub: %s", err)
+		log.Print(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	var res srtResponse
+	vars := mux.Vars(r)
+	session := vars["session"]
+	fileName := vars["filename"]
+	if fileName == "" {
+		msg := "autosub: missing param 'filename'"
+		log.Print(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+	if session == "" {
+		msg := "autosub: missing param 'session'"
+		log.Print(msg)
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	audioFile := filepath.Join(baseDir, session, fileName)
+	ext := filepath.Ext(audioFile)
+	if ext == "" {
+		audioFile = fmt.Sprintf("%s.%s", audioFile, "webm")
+	}
+	srtFile := strings.Replace(audioFile, ".webm", ".srt", -1)
+	lang := "sv"
+
+	if _, err := os.Stat(audioFile); os.IsNotExist(err) {
+		res.Message = fmt.Sprintf("no such file: %s", fileName)
+	} else {
+		cmd := exec.Command(autosubCmd, "-S", lang, "-D", lang, "-o", srtFile, audioFile)
+		var out bytes.Buffer
+		var sterr bytes.Buffer
+		cmd.Stdout = &out
+		cmd.Stderr = &sterr
+
+		err := cmd.Run()
+		if err != nil {
+			msg := fmt.Sprintf("autosub: failed running %s : %v", cmd.Path, err)
+			log.Print(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+
+		bytes, err := ioutil.ReadFile(srtFile)
+		if err != nil {
+			msg := fmt.Sprintf("autosub: failed to read srt file : %v", err)
+			log.Print(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+
+		units := strings.Split(strings.TrimSpace(string(bytes)), "\n\n")
+		res.Text = []srtUnit{}
+		for _, unit := range units {
+			lines := strings.Split(unit, "\n")
+			if len(lines) != 3 {
+			}
+			idS := lines[0]
+			id, err := strconv.ParseInt(idS, 10, 64)
+			if err != nil {
+				msg := fmt.Sprintf("autosub: failed to parse srt file : %v", err)
+				log.Print(msg)
+				http.Error(w, msg, http.StatusInternalServerError)
+				return
+			}
+			timeCode := lines[1]
+			text := lines[2]
+			res.Text = append(res.Text, srtUnit{ID: id, TimeCode: timeCode, Text: text})
+		}
+	}
+
+	resJSON, err := rec.PrettyMarshal(res)
+	if err != nil {
+		msg := fmt.Sprintf("autosub: failed to create JSON from struct : %v", res)
 		log.Print(msg)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
@@ -786,7 +911,7 @@ func saveAudio(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonObj := JSONObject{
-		SessionID:     ao.SessionID,
+		SessionObject: ao.SessionObject,
 		StartTime:     ao.StartTime,
 		EndTime:       ao.EndTime,
 		TimeCodeStart: ao.TimeCodeStart,
@@ -905,6 +1030,13 @@ func main() {
 	r.HandleFunc("/save_edited_text", saveEditedText).Methods("POST")
 	r.HandleFunc("/save_recogniser_text/{text_object}", saveRecogniserText).Methods("GET")
 	r.HandleFunc("/save_edited_text/{text_object}", saveEditedText).Methods("GET")
+
+	if err := autosubEnabled(); err == nil {
+		log.Println("chromedictator autosub enabled")
+		r.HandleFunc("/autosub/{session}/{filename}", autosub).Methods("GET")
+	} else {
+		log.Println("chromedictator autosub disnabled")
+	}
 
 	r.HandleFunc("/abbrev/list", listAbbrevs)
 	r.HandleFunc("/abbrev/add/{abbrev}/{expansion}", addAbbrev)
