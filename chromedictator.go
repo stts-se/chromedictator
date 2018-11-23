@@ -645,7 +645,7 @@ func autosub(w http.ResponseWriter, r *http.Request) {
 
 		err := cmd.Run()
 		if err != nil {
-			msg := fmt.Sprintf("autosub: failed running %s : %v", cmd.Path, err)
+			msg := fmt.Sprintf("autosub: internal command failure")
 			log.Print(msg)
 			http.Error(w, msg, http.StatusInternalServerError)
 			return
