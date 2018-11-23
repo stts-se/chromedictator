@@ -33,6 +33,36 @@ var baseDir = "audio_files" // This is where the session sub-dirs live
 
 var autosubCmd = "autosub"
 
+// for neater request param validation
+type param struct {
+	name  string
+	value string
+}
+
+func newParam(name string) param {
+	return param{name: name, value: ""}
+}
+
+func requireParams(vars map[string]string, params ...*param) error {
+	missing := []string{}
+	for _, p := range params {
+		v, ok := vars[p.name]
+		if !ok || strings.TrimSpace(v) == "" {
+			missing = append(missing, p.name)
+		} else {
+			p.value = v
+		}
+	}
+	if len(missing) > 0 {
+		paramString := "param"
+		if len(missing) != 1 {
+			paramString += "s"
+		}
+		return fmt.Errorf("missing required %s: %s", paramString, strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 // Abbrev is a tuple holding an abbreviation and its expansion.
 type Abbrev struct {
 	Abbrev    string `json:"abbrev"`
@@ -101,10 +131,10 @@ type srtUnit struct {
 }
 
 type srtResponse struct {
-	JSONObject
-	//FileType string    `json:"file_type"`
-	Text    []srtUnit `json:"text"`
-	Message string    `json:"message"`
+	SessionObject
+	FileName string    `json:"file_name"`
+	Text     []srtUnit `json:"text"`
+	Message  string    `json:"message"`
 }
 
 type listResponse struct {
@@ -609,24 +639,20 @@ func autosub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var res srtResponse
 	vars := mux.Vars(r)
-	session := vars["session"]
-	fileName := vars["filename"]
-	if fileName == "" {
-		msg := "autosub: missing param 'filename'"
+	var session = newParam("session")
+	var fileName = newParam("filename")
+	err := requireParams(vars, &session, &fileName)
+	if err != nil {
+		msg := fmt.Sprintf("autosub: param check failed : %v", err)
 		log.Print(msg)
-		http.Error(w, msg, http.StatusBadRequest)
+		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
-	if session == "" {
-		msg := "autosub: missing param 'session'"
-		log.Print(msg)
-		http.Error(w, msg, http.StatusBadRequest)
-		return
-	}
+	var res = srtResponse{SessionObject: SessionObject{session.value},
+		FileName: fileName.value}
 
-	audioFile := filepath.Join(baseDir, session, fileName)
+	audioFile := filepath.Join(baseDir, session.value, fileName.value)
 	ext := filepath.Ext(audioFile)
 	if ext == "" {
 		audioFile = fmt.Sprintf("%s.%s", audioFile, "webm")
