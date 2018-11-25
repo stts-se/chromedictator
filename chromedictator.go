@@ -1061,7 +1061,7 @@ func main() {
 		log.Println("chromedictator autosub enabled")
 		r.HandleFunc("/autosub/{session}/{filename}", autosub).Methods("GET")
 	} else {
-		log.Println("chromedictator autosub disnabled")
+		log.Println("chromedictator autosub disabled")
 	}
 
 	r.HandleFunc("/abbrev/list", listAbbrevs)
