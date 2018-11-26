@@ -371,20 +371,20 @@ function initWebkitSpeechRecognition() {
 
 function populateLanguages() {
     const langSelect = document.getElementById("lang_select");
-    const langs = ["&#x1F1F8;&#x1F1EA; sv-SE",
-		   "&#x1F1E9;&#x1F1F0; da-DK",
-		   "&#x1F1E9;&#x1F1EA; de-DE",
-		   "&#x1F1EC;&#x1F1E7; en-UK",
-		   "&#x1F1FA;&#x1F1F8; en-US",
-		   "&#x1F1EB;&#x1F1F7; fr-FR",
-		   "&#x1F1F3;&#x1F1F4; nb-NO"];
+    const langs = [ { flag: "&#x1F1F8;&#x1F1EA;", id: "sv-SE" },
+		    { flag: "&#x1F1E9;&#x1F1F0;", id: "da-DK" },
+		    { flag: "&#x1F1E9;&#x1F1EA;", id: "de-DE" },
+		    { flag: "&#x1F1EC;&#x1F1E7;", id: "en-UK" },
+		    { flag: "&#x1F1FA;&#x1F1F8;", id: "en-US" },
+		    { flag: "&#x1F1EB;&#x1F1F7;", id: "fr-FR" },
+		    { flag: "&#x1F1F3;&#x1F1F4;", id: "nb-NO" }, ];
     for (let i=0; i<langs.length;i++) {
 	const lang = langs[i];
 	const ele = document.createElement("option");
-	ele.value=lang;
-	ele.innerHTML= lang;
+	ele.innerHTML= "<span class='flag'>" + lang.flag + "</span> <span class='id'>" + lang.id + "</span>";
+	ele.value=lang.id;
 	if (i===0) {
-	    recognition.lang = lang;
+	    recognition.lang = lang.id;
 	    ele.selected = "selected";
 	}
 	langSelect.appendChild(ele);
