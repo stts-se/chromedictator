@@ -371,18 +371,18 @@ function initWebkitSpeechRecognition() {
 
 function populateLanguages() {
     const langSelect = document.getElementById("lang_select");
-    const langs = ["sv-SE",
-		   "da-DK",
-		   "de-DE",
-		   "en-UK",
-		   "en-US",
-		   "fr-FR",
-		   "nb-NO"];
+    const langs = ["&#x1F1F8;&#x1F1EA; sv-SE",
+		   "&#x1F1E9;&#x1F1F0; da-DK",
+		   "&#x1F1E9;&#x1F1EA; de-DE",
+		   "&#x1F1EC;&#x1F1E7; en-UK",
+		   "&#x1F1FA;&#x1F1F8; en-US",
+		   "&#x1F1EB;&#x1F1F7; fr-FR",
+		   "&#x1F1F3;&#x1F1F4; nb-NO"];
     for (let i=0; i<langs.length;i++) {
 	const lang = langs[i];
 	const ele = document.createElement("option");
 	ele.value=lang;
-	ele.textContent=lang;
+	ele.innerHTML= lang;
 	if (i===0) {
 	    recognition.lang = lang;
 	    ele.selected = "selected";
