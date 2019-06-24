@@ -6,6 +6,9 @@ https://github.com/stts-se/chromedictator
 
 ## Build and run from source
 
+
+ Requires Go >= 1.12.
+
  If you do not already have Go installed, download and install the most recent stable version from https://golang.org/dl/, then:
 
 
